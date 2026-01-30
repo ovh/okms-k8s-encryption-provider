@@ -1,0 +1,16 @@
+Licences:
+Apache-2.0
+BSD-3-Clause
+Unknown
+
+Packages:
+github.com/golang/go; BSD-3-Clause
+github.com/ovh/kmip-go; Apache-2.0
+golang.org/x/net; BSD-3-Clause
+golang.org/x/sys; BSD-3-Clause
+golang.org/x/text; BSD-3-Clause
+google.golang.org/genproto/googleapis/rpc; Apache-2.0
+google.golang.org/grpc; Apache-2.0
+google.golang.org/protobuf; BSD-3-Clause
+k8s.io/kms; Apache-2.0
+okms-k8s-encryption-provider; Unknown. See go/okms-k8s-encryption-provider/LICENSE file
