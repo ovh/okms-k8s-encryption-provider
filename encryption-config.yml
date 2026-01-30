@@ -1,0 +1,12 @@
+apiVersion: apiserver.config.k8s.io/v1
+kind: EncryptionConfiguration
+resources:
+  - resources:
+    - secrets
+    providers:
+    - kms:
+        name: okms-encryption-provider
+        endpoint: unix:///var/run/okms_etcd_plugin.sock
+        cachesize: 1000
+        timeout: 3s
+    - identity: {}
