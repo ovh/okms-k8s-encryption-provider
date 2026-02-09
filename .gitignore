@@ -1,6 +1,6 @@
 certs/
 dist/
-.build/
+build/
 *.pem
 *.log
 *.db

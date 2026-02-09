@@ -1,0 +1,61 @@
+name: build-and-test-workflow
+on: [push]
+integrations: [artifactory-enablers-kms]
+
+jobs:
+  golangci-lint:
+    runs-on: KMSAAS/stash_ovh_net/cen/kmsaas-cds-workers/kms-base-go
+    description: Run golangci-lint for code quality
+    steps:
+      - uses: actions/checkout
+        id: checkout
+      - run: |-
+          #!/bin/sh
+          set -xe
+          make lint
+      - uses: actions/uploadArtifact
+        with:
+          path: build/lint-report.json
+
+  build-application:
+    runs-on: KMSAAS/stash_ovh_net/cen/kmsaas-cds-workers/kms-base-go
+    description: Compile the binary for current architecture
+    needs:
+      - golangci-lint
+    steps:
+      - uses: actions/checkout
+        id: checkout
+      - run: |-
+          #!/bin/bash
+          set -xe
+          make build
+      - uses: actions/uploadArtifact
+        with:
+          path: build/okms-k8s-encryption-provider
+
+  unit-tests:
+    runs-on: KMSAAS/stash_ovh_net/cen/kmsaas-cds-workers/kms-base-go
+    description: Run unit tests with coverage and junit report
+    needs:
+      - build-application
+    steps:
+      - uses: actions/checkout
+        id: checkout
+      - run: |-
+          #!/bin/bash
+          set -xe
+          make test
+      - uses: actions/uploadArtifact
+        with:
+          path: build/junit.xml
+      - uses: actions/uploadArtifact
+        with:
+          path: build/coverage.html
+      - uses: actions/uploadArtifact
+        with:
+          path: build/coverage.out
+      - uses: actions/uploadArtifact
+        with:
+          path: build/test-results.json
+
+retention: 180
