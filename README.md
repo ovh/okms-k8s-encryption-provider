@@ -6,12 +6,13 @@
 
 ## 📖 Overview
 
-`okms-k8s-encryption-provider` is an implementation of the kube-apiserver [encryption provider](https://kubernetes.io/docs/tasks/administer-cluster/kms-provider/)  enabling Kubernetes clusters to encrypt/decrypt data at rest using **OVHcloud KMS** through the **KMIP** protocol. The plugin implements the `kms/v2` interface required by etcd and forwards encryption requests to a KMIP‑compatible server (OVHcloud KMS or any other KMIP server).
+`okms-k8s-encryption-provider` is an implementation of the kube-apiserver [encryption provider](https://kubernetes.io/docs/tasks/administer-cluster/kms-provider/) enabling Kubernetes clusters to encrypt/decrypt data at rest using **OVHcloud KMS** either through the **KMIP** or the **REST** protocol. The plugin implements the `kms/v2` interface required by etcd and forwards encryption requests to a KMIP‑compatible server (OVHcloud KMS or any other KMIP server) or a REST API compatible with the OKMS Service Key API, depending on the selected protocol.
 
 ## 🚀 Features
 
 - **Transparent encryption** for etcd data‑blocks via the standard `kms/v2` interface.
 - **KMIP 1.0‑1.4 support** – works with OVHcloud KMS out‑of‑the‑box.
+- **REST API support** – works with OVHcloud KMS out‑of‑the‑box.
 - **Mutual TLS authentication** (client certificates) – no passwords stored in the cluster.
 - **Stateless design** – the plugin does not store any secret locally; all cryptographic material stays in the KMS.
 
@@ -28,7 +29,7 @@ Or you can build from sources.
 ```bash
 git clone https://github.com/ovh/okms-k8s-encryption-provider.git
 cd okms-k8s-encryption-provider
-go build -o okms-k8s-encryption-provider
+go build -o okms-k8s-encryption-provider ./cmd/okms-k8s-encryption-provider
 ```
 
 ## 🏃 Uses with Kubernetes
@@ -37,10 +38,11 @@ go build -o okms-k8s-encryption-provider
 
 To start using the OVHcloud KMS as an encryption provider for kubernetes you will need the following:
 
-- An OVHcloud account with a [Key Management system (KMS)](https://www.ovh.com/manager/#/okms/key-management-service) and permissions to manage KMS KMIP keys
+- An OVHcloud account with a [Key Management system (KMS)](https://www.ovh.com/manager/#/okms/key-management-service) and permissions to manage KMS KMIP keys and KMS Service Keys
 - Management access to a Kubernetes API server
 - Access certificate for your KMS domain
 - A KMIP AES Key in your KMS. You can create one using the [okms-cli](https://github.com/ovh/okms-cli)
+- An AES Service Key, with encrypt,decrypt operations set, in your KMS. You can create one using the [okms-cli](https://github.com/ovh/okms-cli)
 
 We recommend you to read the following documentation beforehand:
 
@@ -51,22 +53,37 @@ We recommend you to read the following documentation beforehand:
 
 The encryption provider can be run on the kube-apiserver hosts directly with the following command line:
 
+KMIP protocol:
 ```bash
 ./okms-k8s-encryption-provider \
+-protocol "kmip" \
 -client-cert "~/.ovh-kms/cert.pem" \
 -client-key "~/.ovh-kms/key.pem" \ 
--kmip-addr "eu-west-par.okms.ovh.net:5696" \ 
--kmip-key-id "70001308-5674-43fe-93dd-6270ecac0710"
+-serv-addr "eu-west-par.okms.ovh.net:5696" \  # kmip server
+-encryption-key-id "70001308-5674-43fe-93dd-6270ecac0710" # kmip key id
+```
+
+REST protocol:
+```bash
+./okms-k8s-encryption-provider \
+-protocol "rest" \
+-client-cert "~/.ovh-kms/cert.pem" \
+-client-key "~/.ovh-kms/key.pem" \ 
+-serv-addr "https://eu-west-rbx.okms.ovh.net" \  # okms addr
+-okms-id "113d1c44-2b1d-239c-a929-c11bd1847057" \
+-encryption-key-id "70001308-5674-43fe-93dd-6270ecac0710" # service key id
 ```
 
 Where `cert.pem` and `key.pem` are your access certificate to your OKMS.
 
 | Flag | Description | Default |
 |------|-------------|---------|
+| `--protocol` | Protocol to use. Either "kmip" or "rest". | `""` (required) |
 | `--sock` | Path to the Unix socket the provider will listen on. Should be mounted inside the Kubernetes apiserver | `/var/run/okms_etcd_plugin.sock` |
 | `--timeout` | Timeout for the gRPC server operations. | `10s` |
-| `--kmip-addr` | Address of the KMIP server. Can be found in the [OVHcloud manager](https://www.ovh.com/manager) page of your KMS. (e.g `eu-west-rbx.okms.ovh.net:5696`) | `""` (required) |
-| `--kmip-key-id` | Identifier of the encryption key to use on the KMIP server. | `""` (required) |
+| `--serv-addr` | Address of the encryption server. Can be found in the [OVHcloud manager](https://www.ovh.com/manager) page of your KMS. (e.g `eu-west-rbx.okms.ovh.net:5696`, `https://eu-west-rbx.okms.ovh.net`) | `""` (required) |
+| `--encryption-key-id` | Identifier of the encryption key to use on the KMIP/REST server. | `""` (required) |
+| `--okms-id` | Identifier of your OKMS. | `""` (required if protocol="rest") |
 | `--client-cert` | Path to the client certificate file for [mutual TLS authentication with the KMS](https://help.ovhcloud.com/csm/en-gb-okms-certificate-management?id=kb_article_view&sysparm_article=KB0072599). | `""` (required) |
 | `--client-key` | Path to the private key file associated with the client certificate. | `""` (required)|
 | `--debug` | Activate debug traces. | `false` |

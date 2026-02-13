@@ -3,6 +3,7 @@
 BUILD_DIR := build
 BINARY_NAME := okms-k8s-encryption-provider
 DIST_DIR := $(BUILD_DIR)/dist
+MAIN_PKG := ./cmd/okms-k8s-encryption-provider
 
 # Supported architectures for cross-compilation
 ARCHITECTURES := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64
@@ -13,7 +14,7 @@ all: lint build test
 build:
 	@echo "Building okms-k8s-encryption-provider for current architecture..."
 	@mkdir -p $(BUILD_DIR)
-	go build -o $(BUILD_DIR)/$(BINARY_NAME) .
+	go build -o $(BUILD_DIR)/$(BINARY_NAME) $(MAIN_PKG)
 
 # Build for multiple architectures
 build-all: clean
@@ -27,7 +28,7 @@ build-all: clean
 			output=$${output}.exe; \
 		fi; \
 		echo "Building for $$arch -> $$output"; \
-		GOOS=$$os GOARCH=$$cpu go build -o $$output -ldflags "-X main.version=$(GIT_VERSION)" .; \
+		GOOS=$$os GOARCH=$$cpu go build -o $$output -ldflags "-X main.version=$(GIT_VERSION)" $(MAIN_PKG); \
 	done
 	@echo "Build complete. Artifacts in $(DIST_DIR)/"
 

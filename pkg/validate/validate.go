@@ -7,14 +7,24 @@
 // ANY KIND, either express or implied. See the License for the specific language
 // governing permissions and limitations under the License.
 
-package main
+package validate
 
 import (
 	"crypto/tls"
 	"fmt"
 )
 
-func ValidateFlags(kmipAddr, keyId, clientCert, clientKey *string) error {
+func ValidateFlags(protocol, servAddr, keyId, okmsId, clientCert, clientKey *string) error {
+	if protocol == nil || *protocol == "" {
+		return fmt.Errorf("Missing protocol: protocol")
+	} else if *protocol != "kmip" && *protocol != "rest" {
+		return fmt.Errorf("Invalid protocol: %s", *protocol)
+	}
+
+	if *protocol == "rest" && (okmsId == nil || *okmsId == "") {
+		return fmt.Errorf("Missing okmsId: okms-id")
+	}
+
 	if clientCert == nil || clientKey == nil || *clientCert == "" || *clientKey == "" {
 		return fmt.Errorf("Missing certificates: client-cert, client-key")
 	}
@@ -23,12 +33,13 @@ func ValidateFlags(kmipAddr, keyId, clientCert, clientKey *string) error {
 		return fmt.Errorf("Could not load certificate: %v", err)
 	}
 
-	if kmipAddr == nil || *kmipAddr == "" {
-		return fmt.Errorf("Missing address of the KMIP server: kmip-addr")
+	if servAddr == nil || *servAddr == "" {
+		return fmt.Errorf("Missing address of the encryption server: serv-addr")
 	}
 
 	if keyId == nil || *keyId == "" {
-		return fmt.Errorf("Missing key Id : kmip-key-id")
+		return fmt.Errorf("Missing key Id: encryption-key-id")
 	}
+
 	return nil
 }
