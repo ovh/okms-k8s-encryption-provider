@@ -42,6 +42,8 @@ func setup() {
 func TestValidateFlags(t *testing.T) {
 	setup()
 	defaultProtocol := "kmip"
+	restProtocol := "rest"
+	invalidProtocol := "invalid"
 	defaultServAddr := "localhost:5696"
 	defaultkeyId := "3d588782-dbe5-40ad-852b-78f029ae88db"
 	defaultokmsId := "11111111-1111-1111-1111-111111111111"
@@ -50,7 +52,7 @@ func TestValidateFlags(t *testing.T) {
 
 	tcs := []struct {
 		name          string
-		protocol      string
+		protocol      *string
 		servAddr      string
 		keyId         string
 		okmsId        string
@@ -60,7 +62,7 @@ func TestValidateFlags(t *testing.T) {
 	}{
 		{
 			name:          "Everything OK",
-			protocol:      defaultProtocol,
+			protocol:      &defaultProtocol,
 			servAddr:      defaultServAddr,
 			keyId:         defaultkeyId,
 			okmsId:        defaultokmsId,
@@ -70,7 +72,6 @@ func TestValidateFlags(t *testing.T) {
 		},
 		{
 			name:          "protocol missing",
-			protocol:      "",
 			servAddr:      defaultServAddr,
 			keyId:         defaultkeyId,
 			okmsId:        defaultokmsId,
@@ -79,8 +80,18 @@ func TestValidateFlags(t *testing.T) {
 			expectedError: fmt.Errorf("Missing protocol: protocol"),
 		},
 		{
+			name:          "invalid protocol",
+			protocol:      &invalidProtocol,
+			servAddr:      defaultServAddr,
+			keyId:         defaultkeyId,
+			okmsId:        defaultokmsId,
+			clientCert:    defaultClientCert,
+			clientKey:     defaultClientKey,
+			expectedError: fmt.Errorf("Invalid protocol: %s", invalidProtocol),
+		},
+		{
 			name:          "okmsId missing",
-			protocol:      "rest",
+			protocol:      &restProtocol,
 			servAddr:      defaultServAddr,
 			keyId:         defaultkeyId,
 			clientCert:    defaultClientCert,
@@ -89,7 +100,7 @@ func TestValidateFlags(t *testing.T) {
 		},
 		{
 			name:          "serv addr missing",
-			protocol:      defaultProtocol,
+			protocol:      &defaultProtocol,
 			servAddr:      "",
 			keyId:         defaultkeyId,
 			okmsId:        defaultokmsId,
@@ -99,7 +110,7 @@ func TestValidateFlags(t *testing.T) {
 		},
 		{
 			name:          "key id missing",
-			protocol:      defaultProtocol,
+			protocol:      &defaultProtocol,
 			servAddr:      defaultServAddr,
 			keyId:         "",
 			okmsId:        defaultokmsId,
@@ -108,18 +119,26 @@ func TestValidateFlags(t *testing.T) {
 			expectedError: fmt.Errorf("Missing key Id: encryption-key-id"),
 		},
 		{
-			name:          "cert  missing",
-			protocol:      defaultProtocol,
+			name:          "client cert missing",
+			protocol:      &defaultProtocol,
 			servAddr:      defaultServAddr,
 			keyId:         defaultkeyId,
 			okmsId:        defaultokmsId,
-			clientCert:    "",
 			clientKey:     defaultClientKey,
-			expectedError: fmt.Errorf("Missing certificates: client-cert, client-key"),
+			expectedError: fmt.Errorf("Missing client certificate: client-cert"),
+		},
+		{
+			name:          "client key missing",
+			protocol:      &defaultProtocol,
+			servAddr:      defaultServAddr,
+			keyId:         defaultkeyId,
+			okmsId:        defaultokmsId,
+			clientCert:    defaultClientCert,
+			expectedError: fmt.Errorf("Missing client key: client-key"),
 		},
 		{
 			name:          "wrong cert",
-			protocol:      defaultProtocol,
+			protocol:      &defaultProtocol,
 			servAddr:      defaultServAddr,
 			keyId:         defaultkeyId,
 			okmsId:        defaultokmsId,
@@ -131,7 +150,7 @@ func TestValidateFlags(t *testing.T) {
 
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
-			err := ValidateFlags(&tc.protocol, &tc.servAddr, &tc.keyId, &tc.okmsId, &tc.clientCert, &tc.clientKey)
+			err := ValidateFlags(tc.protocol, &tc.servAddr, &tc.keyId, &tc.okmsId, &tc.clientCert, &tc.clientKey)
 			if tc.expectedError != nil {
 				assert.EqualError(t, err, tc.expectedError.Error())
 			} else {

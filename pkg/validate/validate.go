@@ -15,31 +15,67 @@ import (
 )
 
 func ValidateFlags(protocol, servAddr, keyId, okmsId, clientCert, clientKey *string) error {
-	if protocol == nil || *protocol == "" {
+	if err := validateProtocol(protocol, okmsId); err != nil {
+		return err
+	}
+	if err := validateMTLS(clientCert, clientKey); err != nil {
+		return err
+	}
+	if err := validateEncryptionKey(keyId); err != nil {
+		return err
+	}
+	if err := validateServerAddress(servAddr); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func validateProtocol(protocol, okmsId *string) error {
+	if protocol == nil {
 		return fmt.Errorf("Missing protocol: protocol")
-	} else if *protocol != "kmip" && *protocol != "rest" {
+	}
+
+	switch *protocol {
+	case "rest":
+		if okmsId == nil || *okmsId == "" {
+			return fmt.Errorf("Missing okmsId: okms-id")
+		}
+	case "kmip":
+		// nothing to do
+	default:
 		return fmt.Errorf("Invalid protocol: %s", *protocol)
 	}
 
-	if *protocol == "rest" && (okmsId == nil || *okmsId == "") {
-		return fmt.Errorf("Missing okmsId: okms-id")
+	return nil
+}
+
+func validateMTLS(clientCert, clientKey *string) error {
+	if clientCert == nil || *clientCert == "" {
+		return fmt.Errorf("Missing client certificate: client-cert")
+	}
+	if clientKey == nil || *clientKey == "" {
+		return fmt.Errorf("Missing client key: client-key")
 	}
 
-	if clientCert == nil || clientKey == nil || *clientCert == "" || *clientKey == "" {
-		return fmt.Errorf("Missing certificates: client-cert, client-key")
-	}
 	_, err := tls.LoadX509KeyPair(*clientCert, *clientKey)
 	if err != nil {
 		return fmt.Errorf("Could not load certificate: %v", err)
 	}
 
-	if servAddr == nil || *servAddr == "" {
-		return fmt.Errorf("Missing address of the encryption server: serv-addr")
-	}
+	return nil
+}
 
+func validateEncryptionKey(keyId *string) error {
 	if keyId == nil || *keyId == "" {
 		return fmt.Errorf("Missing key Id: encryption-key-id")
 	}
+	return nil
+}
 
+func validateServerAddress(servAddr *string) error {
+	if servAddr == nil || *servAddr == "" {
+		return fmt.Errorf("Missing address of the encryption server: serv-addr")
+	}
 	return nil
 }
