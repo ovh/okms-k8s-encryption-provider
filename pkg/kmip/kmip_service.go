@@ -7,7 +7,7 @@
 // ANY KIND, either express or implied. See the License for the specific language
 // governing permissions and limitations under the License.
 
-package main
+package kmip
 
 import (
 	"context"
@@ -21,6 +21,20 @@ import (
 	"k8s.io/kms/pkg/service"
 )
 
+const (
+	ANNOT_IV  = "iv.okms.ovh.com"
+	ANNOT_ALG = "alg.okms.ovh.com"
+)
+
+var cryptoParamsPreset = map[string]kmip.CryptographicParameters{
+	"AES_GCM": {
+		CryptographicAlgorithm: kmip.CryptographicAlgorithmAES,
+		BlockCipherMode:        kmip.BlockCipherModeGCM,
+		TagLength:              16,
+		IVLength:               12,
+	},
+}
+
 type KmipService struct {
 	client *kmipclient.Client
 	keyID  string
@@ -28,6 +42,14 @@ type KmipService struct {
 }
 
 var _ service.Service = (*KmipService)(nil)
+
+func getCryptoParams(alg string) (kmip.CryptographicParameters, error) {
+	cryptoParams, ok := cryptoParamsPreset[alg]
+	if !ok {
+		return kmip.CryptographicParameters{}, fmt.Errorf("unsupported algorithm: %s", alg)
+	}
+	return cryptoParams, nil
+}
 
 func NewKmipService(addr, keyId string, opts ...kmipclient.Option) (*KmipService, error) {
 	slog.Info("Create a new KMIP client")

@@ -7,7 +7,7 @@
 // ANY KIND, either express or implied. See the License for the specific language
 // governing permissions and limitations under the License.
 
-package main
+package validate
 
 import (
 	"fmt"
@@ -41,55 +41,107 @@ func setup() {
 
 func TestValidateFlags(t *testing.T) {
 	setup()
-	defaultKmipAddr := "localhost:5696"
+	defaultProtocol := "kmip"
+	restProtocol := "rest"
+	invalidProtocol := "invalid"
+	defaultServAddr := "localhost:5696"
 	defaultkeyId := "3d588782-dbe5-40ad-852b-78f029ae88db"
+	defaultokmsId := "11111111-1111-1111-1111-111111111111"
 	defaultClientCert := "./build/dummy_cert.pem"
 	defaultClientKey := "./build/dummy_key.pem"
 
 	tcs := []struct {
 		name          string
-		kmipAddr      string
+		protocol      *string
+		servAddr      string
 		keyId         string
+		okmsId        string
 		clientCert    string
 		clientKey     string
 		expectedError error
 	}{
 		{
 			name:          "Everything OK",
-			kmipAddr:      defaultKmipAddr,
+			protocol:      &defaultProtocol,
+			servAddr:      defaultServAddr,
 			keyId:         defaultkeyId,
+			okmsId:        defaultokmsId,
 			clientCert:    defaultClientCert,
 			clientKey:     defaultClientKey,
 			expectedError: nil,
 		},
 		{
-			name:          "kmip addr missing",
-			kmipAddr:      "",
+			name:          "protocol missing",
+			servAddr:      defaultServAddr,
+			keyId:         defaultkeyId,
+			okmsId:        defaultokmsId,
+			clientCert:    defaultClientCert,
+			clientKey:     defaultClientKey,
+			expectedError: fmt.Errorf("Missing protocol: protocol"),
+		},
+		{
+			name:          "invalid protocol",
+			protocol:      &invalidProtocol,
+			servAddr:      defaultServAddr,
+			keyId:         defaultkeyId,
+			okmsId:        defaultokmsId,
+			clientCert:    defaultClientCert,
+			clientKey:     defaultClientKey,
+			expectedError: fmt.Errorf("Invalid protocol: %s", invalidProtocol),
+		},
+		{
+			name:          "okmsId missing",
+			protocol:      &restProtocol,
+			servAddr:      defaultServAddr,
 			keyId:         defaultkeyId,
 			clientCert:    defaultClientCert,
 			clientKey:     defaultClientKey,
-			expectedError: fmt.Errorf("Missing address of the KMIP server: kmip-addr"),
+			expectedError: fmt.Errorf("Missing okmsId: okms-id"),
+		},
+		{
+			name:          "serv addr missing",
+			protocol:      &defaultProtocol,
+			servAddr:      "",
+			keyId:         defaultkeyId,
+			okmsId:        defaultokmsId,
+			clientCert:    defaultClientCert,
+			clientKey:     defaultClientKey,
+			expectedError: fmt.Errorf("Missing address of the encryption server: serv-addr"),
 		},
 		{
 			name:          "key id missing",
-			kmipAddr:      defaultKmipAddr,
+			protocol:      &defaultProtocol,
+			servAddr:      defaultServAddr,
 			keyId:         "",
+			okmsId:        defaultokmsId,
 			clientCert:    defaultClientCert,
 			clientKey:     defaultClientKey,
-			expectedError: fmt.Errorf("Missing key Id : kmip-key-id"),
+			expectedError: fmt.Errorf("Missing key Id: encryption-key-id"),
 		},
 		{
-			name:          "cert  missing",
-			kmipAddr:      defaultKmipAddr,
+			name:          "client cert missing",
+			protocol:      &defaultProtocol,
+			servAddr:      defaultServAddr,
 			keyId:         defaultkeyId,
-			clientCert:    "",
+			okmsId:        defaultokmsId,
 			clientKey:     defaultClientKey,
-			expectedError: fmt.Errorf("Missing certificates: client-cert, client-key"),
+			expectedError: fmt.Errorf("Missing client certificate: client-cert"),
+		},
+		{
+			name:          "client key missing",
+			protocol:      &defaultProtocol,
+			servAddr:      defaultServAddr,
+			keyId:         defaultkeyId,
+			okmsId:        defaultokmsId,
+			clientCert:    defaultClientCert,
+			expectedError: fmt.Errorf("Missing client key: client-key"),
 		},
 		{
 			name:          "wrong cert",
-			kmipAddr:      defaultKmipAddr,
+			protocol:      &defaultProtocol,
+			servAddr:      defaultServAddr,
 			keyId:         defaultkeyId,
+			okmsId:        defaultokmsId,
 			clientCert:    defaultClientKey,
 			clientKey:     defaultClientKey,
 			expectedError: fmt.Errorf("Could not load certificate: tls: failed to find certificate PEM data in certificate input, but did find a private key; PEM inputs may have been switched"),
@@ -98,7 +150,7 @@ func TestValidateFlags(t *testing.T) {
 
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
-			err := ValidateFlags(&tc.kmipAddr, &tc.keyId, &tc.clientCert, &tc.clientKey)
+			err := ValidateFlags(tc.protocol, &tc.servAddr, &tc.keyId, &tc.okmsId, &tc.clientCert, &tc.clientKey)
 			if tc.expectedError != nil {
 				assert.EqualError(t, err, tc.expectedError.Error())
 			} else {
