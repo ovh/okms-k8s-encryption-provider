@@ -81,7 +81,7 @@ Where `cert.pem` and `key.pem` are your access certificate to your OKMS.
 | `--protocol` | Protocol to use. Either "kmip" or "rest". | `""` (required) |
 | `--sock` | Path to the Unix socket the provider will listen on. Should be mounted inside the Kubernetes apiserver | `/var/run/okms_etcd_plugin.sock` |
 | `--timeout` | Timeout for the gRPC server operations. | `10s` |
-| `--serv-addr` | Address of the encryption server. Can be found in the [OVHcloud manager](https://www.ovh.com/manager) page of your KMS. (e.g `eu-west-rbx.okms.ovh.net:5696`, `https://eu-west-rbx.okms.ovh.net`) | `""` (required) |
+| `--serv-addr` | Address of the encryption server. Can be found in the [OVHcloud manager](https://www.ovh.com/manager) page of your KMS. (e.g for KMIP: `eu-west-rbx.okms.ovh.net:5696`, Rest: `https://eu-west-rbx.okms.ovh.net`) | `""` (required) |
 | `--encryption-key-id` | Identifier of the encryption key to use on the KMIP/REST server. | `""` (required) |
 | `--okms-id` | Identifier of your OKMS. | `""` (required if protocol="rest") |
 | `--client-cert` | Path to the client certificate file for [mutual TLS authentication with the KMS](https://help.ovhcloud.com/csm/en-gb-okms-certificate-management?id=kb_article_view&sysparm_article=KB0072599). | `""` (required) |
