@@ -15,6 +15,7 @@ import (
 	"os"
 	"time"
 
+	keyAttr "okms-k8s-encryption-provider/internal"
 	"okms-k8s-encryption-provider/pkg/kmip"
 	"okms-k8s-encryption-provider/pkg/rest"
 	"okms-k8s-encryption-provider/pkg/validate"
@@ -26,6 +27,7 @@ func main() {
 	protocol := flag.String("protocol", "", "Protocol to use for encryption (rest|kmip)")
 	servAddr := flag.String("serv-addr", "", "Address of the KMIP server")
 	keyId := flag.String("encryption-key-id", "", "ID of the encryption key to use")
+	keyLabel := flag.String("encryption-key-label", "", "Label of the encryption key to use")
 	okmsId := flag.String("okms-id", "", "Only needed if --protocol is rest\nID of your OKMS domain")
 	clientCert := flag.String("client-cert", "", "Path to the client certificate file")
 	clientKey := flag.String("client-key", "", "Path to the client key file")
@@ -33,8 +35,13 @@ func main() {
 
 	flag.Parse()
 
+	keyAttr := keyAttr.KeyAttributes{
+		KeyId:    keyId,
+		KeyLabel: keyLabel,
+	}
+
 	// Validate
-	err := validate.ValidateFlags(protocol, servAddr, keyId, okmsId, clientCert, clientKey)
+	err := validate.ValidateFlags(protocol, servAddr, okmsId, clientCert, clientKey, keyAttr)
 	if err != nil {
 		slog.Error(err.Error())
 		os.Exit(1)
@@ -42,8 +49,8 @@ func main() {
 
 	switch *protocol {
 	case "kmip":
-		kmip.KmipEncryption(*servAddr, *clientCert, *clientKey, *keyId, *sockPath, *timeout, *debug)
+		kmip.KmipEncryption(*servAddr, *clientCert, *clientKey, *sockPath, keyAttr, *timeout, *debug)
 	case "rest":
-		rest.RestEncryption(*servAddr, *clientCert, *clientKey, *keyId, *okmsId, *sockPath, *timeout, *debug)
+		rest.RestEncryption(*servAddr, *clientCert, *clientKey, *okmsId, *sockPath, keyAttr, *timeout, *debug)
 	}
 }

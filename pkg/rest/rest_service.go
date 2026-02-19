@@ -13,42 +13,34 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"fmt"
 	"log/slog"
 	"os"
 
 	"github.com/google/uuid"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 	"github.com/ovh/okms-sdk-go"
+	"github.com/ovh/okms-sdk-go/types"
 	"k8s.io/kms/pkg/service"
+
+	keyAttr "okms-k8s-encryption-provider/internal"
 )
 
 type RestAPIService struct {
-	client         *okms.Client
-	okmsUUID       uuid.UUID
-	serviceKeyId   string
-	serviceKeyUUID uuid.UUID
+	client          *okms.Client
+	okmsUUID        uuid.UUID
+	serviceKeyId    string
+	serviceKeyUUID  uuid.UUID
+	serviceKeyLabel *string
 }
 
-func NewRestAPIService(restAddr, clientCert, clientKey, serviceKeyId, okmsId string, debug bool) (*RestAPIService, error) {
+func NewRestAPIService(restAddr, clientCertPath, clientKeyPath, okmsId string, serviceKey keyAttr.KeyAttributes, debug bool) (*RestAPIService, error) {
 	slog.Info("Create a new Rest API client")
 
 	// Client configuration
-	clientCertBytes, err := os.ReadFile(clientCert)
+	clientCfg, err := configureClientWithMTLS(clientCertPath, clientKeyPath)
 	if err != nil {
-		return nil, err
-	}
-	clientKeyBytes, err := os.ReadFile(clientKey)
-	if err != nil {
-		return nil, err
-	}
-	tlsCert, err := tls.X509KeyPair(clientCertBytes, clientKeyBytes)
-	if err != nil {
-		return nil, err
-	}
-	clientCfg := okms.ClientConfig{
-		TlsCfg: &tls.Config{
-			MinVersion:   tls.VersionTLS12,
-			Certificates: []tls.Certificate{tlsCert},
-		},
+		return nil, fmt.Errorf("could not create rest api client: %w", err)
 	}
 	if debug {
 		clientCfg.Middleware = okms.DebugTransport(os.Stderr)
@@ -57,26 +49,16 @@ func NewRestAPIService(restAddr, clientCert, clientKey, serviceKeyId, okmsId str
 	// Request rest API client
 	restClient, err := okms.NewRestAPIClient(restAddr, clientCfg)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not create rest api client: %w", err)
 	}
 	if restClient == nil {
-		return nil, errors.New("retrieved nil rest api client")
+		return nil, errors.New("could not create rest api client: retrieved nil rest api client")
 	}
 
 	// Build rest API service struct
-	okmsUUID, err := uuid.Parse(okmsId)
+	restAPIService, err := buildRestAPIService(restClient, okmsId, serviceKey)
 	if err != nil {
-		return nil, err
-	}
-	serviceKeyUUID, err := uuid.Parse(serviceKeyId)
-	if err != nil {
-		return nil, err
-	}
-	restAPIService := &RestAPIService{
-		client:         restClient,
-		okmsUUID:       okmsUUID,
-		serviceKeyId:   serviceKeyId,
-		serviceKeyUUID: serviceKeyUUID,
+		return nil, fmt.Errorf("could not create rest api client: %w", err)
 	}
 
 	// Validate rest API service
@@ -88,11 +70,86 @@ func NewRestAPIService(restAddr, clientCert, clientKey, serviceKeyId, okmsId str
 	return restAPIService, nil
 }
 
+func buildRestAPIService(restClient *okms.Client, okmsId string, serviceKey keyAttr.KeyAttributes) (*RestAPIService, error) {
+	okmsUUID, err := uuid.Parse(okmsId)
+	if err != nil {
+		return nil, err
+	}
+	serviceKeyId, serviceKeyUUID, err := retrieveServiceKeyId(restClient, okmsUUID, serviceKey)
+	if err != nil {
+		return nil, err
+	}
+	restAPIService := &RestAPIService{
+		client:          restClient,
+		okmsUUID:        okmsUUID,
+		serviceKeyId:    serviceKeyId,
+		serviceKeyUUID:  serviceKeyUUID,
+		serviceKeyLabel: serviceKey.KeyLabel,
+	}
+
+	return restAPIService, nil
+}
+
+func retrieveServiceKeyId(restClient *okms.Client, okmsUUID uuid.UUID, serviceKey keyAttr.KeyAttributes) (string, uuid.UUID, error) {
+	if serviceKey.KeyLabel != nil && *serviceKey.KeyLabel != "" {
+		var counter int
+		var keyId openapi_types.UUID
+		activeState := types.KeyStatesActive
+		iter := restClient.ListAllServiceKeys(okmsUUID, nil, &activeState).Iter(context.Background())
+		for key, err := range iter {
+			if err != nil {
+				return "", uuid.UUID{}, err
+			}
+			if key.Name == *serviceKey.KeyLabel {
+				counter++
+				keyId = key.Id
+			}
+		}
+		if counter > 1 {
+			return "", uuid.UUID{}, fmt.Errorf("Multiple service keys (%d) share the same label", counter)
+		} else if counter == 0 {
+			return "", uuid.UUID{}, nil
+		}
+
+		return keyId.String(), keyId, nil
+	}
+
+	serviceKeyUUID, err := uuid.Parse(*serviceKey.KeyId)
+	return *serviceKey.KeyId, serviceKeyUUID, err
+}
+
+func configureClientWithMTLS(clientCertPath, clientKeyPath string) (okms.ClientConfig, error) {
+	clientCertBytes, err := os.ReadFile(clientCertPath)
+	if err != nil {
+		return okms.ClientConfig{}, err
+	}
+	clientKeyBytes, err := os.ReadFile(clientKeyPath)
+	if err != nil {
+		return okms.ClientConfig{}, err
+	}
+	tlsCert, err := tls.X509KeyPair(clientCertBytes, clientKeyBytes)
+	if err != nil {
+		return okms.ClientConfig{}, err
+	}
+	clientCfg := okms.ClientConfig{
+		TlsCfg: &tls.Config{
+			MinVersion:   tls.VersionTLS12,
+			Certificates: []tls.Certificate{tlsCert},
+		},
+	}
+
+	return clientCfg, nil
+}
+
 // Decrypt implements service.Service.
 func (r *RestAPIService) Decrypt(ctx context.Context, uid string, req *service.DecryptRequest) ([]byte, error) {
 	slog.Info("Decrypting content")
 
-	decryptedData, err := r.client.Decrypt(ctx, r.okmsUUID, r.serviceKeyUUID, "", string(req.Ciphertext))
+	keyId, err := uuid.Parse(req.KeyID)
+	if err != nil {
+		return nil, err
+	}
+	decryptedData, err := r.client.Decrypt(ctx, r.okmsUUID, keyId, "", string(req.Ciphertext))
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +194,18 @@ func (r *RestAPIService) Status(ctx context.Context) (*service.StatusResponse, e
 }
 
 func (r *RestAPIService) Validate() (bool, error) {
-	_, err := r.client.GetServiceKey(context.Background(), r.okmsUUID, r.serviceKeyUUID, nil)
+	serviceKeyId, serviceKeyUUID, err := retrieveServiceKeyId(r.client, r.okmsUUID, keyAttr.KeyAttributes{
+		KeyId:    &r.serviceKeyId,
+		KeyLabel: r.serviceKeyLabel,
+	})
 
-	return err == nil, err
+	if _, err := r.client.GetServiceKey(context.Background(), r.okmsUUID, serviceKeyUUID, nil); err != nil {
+		slog.Error("Provider status : KO", "err", err)
+		return false, err
+	}
+
+	r.serviceKeyId = serviceKeyId
+	r.serviceKeyUUID = serviceKeyUUID
+
+	return true, err
 }

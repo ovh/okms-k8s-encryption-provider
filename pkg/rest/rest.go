@@ -17,10 +17,12 @@ import (
 	"time"
 
 	"k8s.io/kms/pkg/service"
+
+	keyAttr "okms-k8s-encryption-provider/internal"
 )
 
-func RestEncryption(restAddr, clientCert, clientKey, serviceKeyId, okmsId, sockPath string, timeout time.Duration, debug bool) {
-	svc, err := NewRestAPIService(restAddr, clientCert, clientKey, serviceKeyId, okmsId, debug)
+func RestEncryption(restAddr, clientCert, clientKey, okmsId, sockPath string, serviceKey keyAttr.KeyAttributes, timeout time.Duration, debug bool) {
+	svc, err := NewRestAPIService(restAddr, clientCert, clientKey, okmsId, serviceKey, debug)
 	if err != nil {
 		slog.Error(err.Error())
 		os.Exit(1)

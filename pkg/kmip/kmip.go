@@ -19,9 +19,11 @@ import (
 	"github.com/ovh/kmip-go/kmipclient"
 	"github.com/ovh/kmip-go/ttlv"
 	"k8s.io/kms/pkg/service"
+
+	keyAttr "okms-k8s-encryption-provider/internal"
 )
 
-func KmipEncryption(kmipAddr, clientCert, clientKey, kmipKeyId, sockPath string, timeout time.Duration, debug bool) {
+func KmipEncryption(kmipAddr, clientCert, clientKey, sockPath string, kmipKey keyAttr.KeyAttributes, timeout time.Duration, debug bool) {
 	opts := []kmipclient.Option{
 		kmipclient.WithClientCertFiles(clientCert, clientKey),
 	}
@@ -31,7 +33,7 @@ func KmipEncryption(kmipAddr, clientCert, clientKey, kmipKeyId, sockPath string,
 		))
 	}
 
-	svc, err := NewKmipService(kmipAddr, kmipKeyId, opts...)
+	svc, err := NewKmipService(kmipAddr, kmipKey, opts...)
 	if err != nil {
 		slog.Error("Could not create a KMIP Service", "err", err)
 		os.Exit(1)

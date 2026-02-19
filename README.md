@@ -134,6 +134,7 @@ ETCDCTL_API=3 etcdctl \
 The output should be something like:
 
 ```bash
+k8s:enc:kms:v2:okms-encryption-provider:
 0m`�He.0�cryption-provider:�1x��%�B���#JP��J���*ȝ���΂@\n�96�^��ۦ�~0| *�H��
                     `q�*�J�.P��;&~��o#�O�8m��->8L��0�C3���A7�����~���f�V�ܬ���X��_��`�H#�D��z)+�81��qW��y��`�q��}1<LF, ��N��p����i*�aC#E�߸�s������s��l�?�a
 �AźR������.��8H�4�O
@@ -141,9 +142,43 @@ The output should be something like:
 
 ### Rotation
 
-To rotate your key you will need to run two encryption providers, each listening on a different unix socket.
-Below is an example encryption configuration file for all API servers prior to using the new key.
+<u>Command to re-encrypt your data after rotation:</u>
 
+For a single resource of a type:  
+`kubectl get <resource-type> <resource-name> -o yaml | kubectl replace -f -`  
+
+For every resource of a type in the cluster:  
+`kubectl get <resource-type> --all-namespaces -o yaml | kubectl replace -f -`
+
+Only resources configured for KMS encryption (e.g., secrets, configmaps) will be affected.  
+Check your encryption configuration file to know which resources are configured for KMS encryption.
+
+<u>To check if the re-encryption operated well, run this command:</u>
+```bash
+ETCDCTL_API=3 etcdctl \
+    --key /rootfs/etc/kubernetes/pki/kube-apiserver/etcd-client.key \
+    --cert  /rootfs/etc/kubernetes/pki/kube-apiserver/etcd-client.crt \
+    --cacert /rootfs/etc/kubernetes/pki/kube-apiserver/etcd-ca.crt  \
+    --endpoints "https://etcd-a.internal.${CLUSTER}:4001" get /registry/secrets/default/okms-test-secret
+```
+On the first line of the output, you should see `k8s:enc:kms:v2:<new_okms_provider_name>:`.  
+If you still have `k8s:enc:kms:v2:<old_okms_provider_name>:`, the re-encryption did not work.  
+The provider names are the names that you configured in your encryption configuration file.
+
+#### Key Label
+
+If your plugin is configured to use a key label, you only need to associate the label with your new key in your Secret Manager:
+- New write operations will automatically use the new key.  
+- Existing encrypted data will not be re-encrypted automatically.  
+- To re-encrypt existing data using the new key,run the kubectl command above.
+
+The kube apiserver caches its DEKs decrypted in memory, and rotates it either when the cache has been cleared, or if the key ID used to encrypt a DEK has changed. Therefore, associating your key label with a new key ID will trigger the kube apiserver to rotate the associated DEK.
+
+#### Key ID
+
+If your plugin is configured to use a key ID, you need to run two encryption providers, each listening on a different unix socket.  
+
+Below is an example encryption configuration file for all API servers prior to using the new key:
 ```yaml
 apiVersion: apiserver.config.k8s.io/v1
 kind: EncryptionConfiguration
@@ -151,24 +186,26 @@ resources:
   - resources:
     - secrets
     providers:
-    # provider using old key
-    - kms:
-        name: okms-encryption-provider
-        endpoint: unix:///var/run/kmsplugin/socket.sock
-        cachesize: 1000
-        timeout: 3s
     # provider using new key
     - kms:
         name: okms-encryption-provider-2
         endpoint: unix:///var/run/kmsplugin/socket2.sock
         cachesize: 1000
         timeout: 3s
+    # provider using old key
+    - kms:
+        name: okms-encryption-provider
+        endpoint: unix:///var/run/kmsplugin/socket.sock
+        cachesize: 1000
+        timeout: 3s
     - identity: {}
 ```
 
-After all API servers have been restarted and are able to decrypt using the
-new key, move the provider with the new key on top.
-After all secrets have been re-encrypted with the new key, you can remove the old encryption provider.
+You first need to make sure the socket (socket2 in this example) for the new provider is created and listening.  
+Once done, you can re-encrypt the data you want using the kubectl command above.
+
+If you still have some data that is encrypted with your old provider, let it in the configuration file so you can keep accessing your data.  
+Otherwise you can remove it.  
 
 ## 📖 Documentation
 
