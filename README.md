@@ -142,7 +142,7 @@ k8s:enc:kms:v2:okms-encryption-provider:
 
 ### Rotation
 
-<u>Command to re-encrypt your data after rotation:</u>
+#### Command to re-encrypt your data after rotation:
 
 For a single resource of a type:  
 `kubectl get <resource-type> <resource-name> -o yaml | kubectl replace -f -`  
@@ -153,7 +153,7 @@ For every resource of a type in the cluster:
 Only resources configured for KMS encryption (e.g., secrets, configmaps) will be affected.  
 Check your encryption configuration file to know which resources are configured for KMS encryption.
 
-<u>To check if the re-encryption operated well, run this command:</u>
+#### To check if the re-encryption operated well, run this command:
 ```bash
 ETCDCTL_API=3 etcdctl \
     --key /rootfs/etc/kubernetes/pki/kube-apiserver/etcd-client.key \
