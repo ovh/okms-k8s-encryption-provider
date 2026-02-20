@@ -13,20 +13,20 @@ import (
 	"crypto/tls"
 	"fmt"
 
-	keyAttr "okms-k8s-encryption-provider/internal"
+	"okms-k8s-encryption-provider/internal"
 )
 
-func ValidateFlags(protocol, servAddr, okmsId, clientCert, clientKey *string, keyAttr keyAttr.KeyAttributes) error {
-	if err := validateProtocol(protocol, okmsId); err != nil {
+func ValidateFlags(gRPCServerConfig internal.GRPCServerConfig, keyAttr internal.KeyAttributes) error {
+	if err := validateProtocol(gRPCServerConfig.Protocol, gRPCServerConfig.OkmsId); err != nil {
 		return err
 	}
-	if err := validateMTLS(clientCert, clientKey); err != nil {
+	if err := validateMTLS(gRPCServerConfig.TlsConfig.ClientCertPath, gRPCServerConfig.TlsConfig.ClientKeyPath); err != nil {
 		return err
 	}
 	if err := validateEncryptionKey(keyAttr); err != nil {
 		return err
 	}
-	if err := validateServerAddress(servAddr); err != nil {
+	if err := validateServerAddress(gRPCServerConfig.ServAddr); err != nil {
 		return err
 	}
 
@@ -66,7 +66,9 @@ func validateMTLS(clientCert, clientKey *string) error {
 	return nil
 }
 
-func validateEncryptionKey(keyAttr keyAttr.KeyAttributes) error {
+// validateEncryptionKey checks whether a key ID or key label was provided.
+// It returns an error if neither or both are set.
+func validateEncryptionKey(keyAttr internal.KeyAttributes) error {
 	if (keyAttr.KeyId == nil || *keyAttr.KeyId == "") &&
 		(keyAttr.KeyLabel == nil || *keyAttr.KeyLabel == "") {
 		return fmt.Errorf("Missing required key: encryption-key-id | encryption-key-label")

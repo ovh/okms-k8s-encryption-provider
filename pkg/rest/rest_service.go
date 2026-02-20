@@ -23,7 +23,7 @@ import (
 	"github.com/ovh/okms-sdk-go/types"
 	"k8s.io/kms/pkg/service"
 
-	keyAttr "okms-k8s-encryption-provider/internal"
+	"okms-k8s-encryption-provider/internal"
 )
 
 type RestAPIService struct {
@@ -34,20 +34,23 @@ type RestAPIService struct {
 	serviceKeyLabel *string
 }
 
-func NewRestAPIService(restAddr, clientCertPath, clientKeyPath, okmsId string, serviceKey keyAttr.KeyAttributes, debug bool) (*RestAPIService, error) {
+func NewRestAPIService(gRPCServerConfig internal.GRPCServerConfig, serviceKey internal.KeyAttributes, debug *bool) (*RestAPIService, error) {
 	slog.Info("Create a new Rest API client")
 
 	// Client configuration
-	clientCfg, err := configureClientWithMTLS(clientCertPath, clientKeyPath)
+	clientCfg, err := configureClientWithMTLS(
+		*gRPCServerConfig.TlsConfig.ClientCertPath,
+		*gRPCServerConfig.TlsConfig.ClientKeyPath,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("could not create rest api client: %w", err)
 	}
-	if debug {
+	if debug != nil && *debug {
 		clientCfg.Middleware = okms.DebugTransport(os.Stderr)
 	}
 
 	// Request rest API client
-	restClient, err := okms.NewRestAPIClient(restAddr, clientCfg)
+	restClient, err := okms.NewRestAPIClient(*gRPCServerConfig.ServAddr, clientCfg)
 	if err != nil {
 		return nil, fmt.Errorf("could not create rest api client: %w", err)
 	}
@@ -56,7 +59,7 @@ func NewRestAPIService(restAddr, clientCertPath, clientKeyPath, okmsId string, s
 	}
 
 	// Build rest API service struct
-	restAPIService, err := buildRestAPIService(restClient, okmsId, serviceKey)
+	restAPIService, err := buildRestAPIService(restClient, *gRPCServerConfig.OkmsId, serviceKey)
 	if err != nil {
 		return nil, fmt.Errorf("could not create rest api client: %w", err)
 	}
@@ -70,7 +73,7 @@ func NewRestAPIService(restAddr, clientCertPath, clientKeyPath, okmsId string, s
 	return restAPIService, nil
 }
 
-func buildRestAPIService(restClient *okms.Client, okmsId string, serviceKey keyAttr.KeyAttributes) (*RestAPIService, error) {
+func buildRestAPIService(restClient *okms.Client, okmsId string, serviceKey internal.KeyAttributes) (*RestAPIService, error) {
 	okmsUUID, err := uuid.Parse(okmsId)
 	if err != nil {
 		return nil, err
@@ -90,7 +93,7 @@ func buildRestAPIService(restClient *okms.Client, okmsId string, serviceKey keyA
 	return restAPIService, nil
 }
 
-func retrieveServiceKeyId(restClient *okms.Client, okmsUUID uuid.UUID, serviceKey keyAttr.KeyAttributes) (string, uuid.UUID, error) {
+func retrieveServiceKeyId(restClient *okms.Client, okmsUUID uuid.UUID, serviceKey internal.KeyAttributes) (string, uuid.UUID, error) {
 	if serviceKey.KeyLabel != nil && *serviceKey.KeyLabel != "" {
 		var counter int
 		var keyId openapi_types.UUID
@@ -194,7 +197,7 @@ func (r *RestAPIService) Status(ctx context.Context) (*service.StatusResponse, e
 }
 
 func (r *RestAPIService) Validate() (bool, error) {
-	serviceKeyId, serviceKeyUUID, err := retrieveServiceKeyId(r.client, r.okmsUUID, keyAttr.KeyAttributes{
+	serviceKeyId, serviceKeyUUID, err := retrieveServiceKeyId(r.client, r.okmsUUID, internal.KeyAttributes{
 		KeyId:    &r.serviceKeyId,
 		KeyLabel: r.serviceKeyLabel,
 	})

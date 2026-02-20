@@ -18,7 +18,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	keyAttr "okms-k8s-encryption-provider/internal"
+	"okms-k8s-encryption-provider/internal"
 )
 
 const (
@@ -49,13 +49,13 @@ func TestValidateFlags(t *testing.T) {
 	defaultServAddr := "localhost:5696"
 	defaultkeyId := "3d588782-dbe5-40ad-852b-78f029ae88db"
 	defaultkeyLabel := "key-label"
-	KeyId := keyAttr.KeyAttributes{
+	KeyId := internal.KeyAttributes{
 		KeyId: &defaultkeyId,
 	}
-	KeyLabel := keyAttr.KeyAttributes{
+	KeyLabel := internal.KeyAttributes{
 		KeyLabel: &defaultkeyLabel,
 	}
-	bothKeyAttr := keyAttr.KeyAttributes{
+	bothKeyAttr := internal.KeyAttributes{
 		KeyId:    &defaultkeyId,
 		KeyLabel: &defaultkeyLabel,
 	}
@@ -64,126 +64,170 @@ func TestValidateFlags(t *testing.T) {
 	defaultClientKey := "./build/dummy_key.pem"
 
 	tcs := []struct {
-		name          string
-		protocol      *string
-		servAddr      string
-		keyAttr       keyAttr.KeyAttributes
-		okmsId        string
-		clientCert    string
-		clientKey     string
-		expectedError error
+		name             string
+		gRPCServerConfig internal.GRPCServerConfig
+		protocol         *string
+		servAddr         string
+		keyAttr          internal.KeyAttributes
+		okmsId           string
+		clientCert       string
+		clientKey        string
+		expectedError    error
 	}{
 		{
-			name:          "Everything OK with key Id",
-			protocol:      &defaultProtocol,
-			servAddr:      defaultServAddr,
+			name: "Everything OK with key Id",
+			gRPCServerConfig: internal.GRPCServerConfig{
+				Protocol: &defaultProtocol,
+				ServAddr: &defaultServAddr,
+				OkmsId:   &defaultokmsId,
+				TlsConfig: internal.TlsConfig{
+					ClientCertPath: &defaultClientCert,
+					ClientKeyPath:  &defaultClientKey,
+				},
+			},
 			keyAttr:       KeyId,
-			okmsId:        defaultokmsId,
-			clientCert:    defaultClientCert,
-			clientKey:     defaultClientKey,
 			expectedError: nil,
 		},
 		{
-			name:          "Everything OK with key label",
-			protocol:      &defaultProtocol,
-			servAddr:      defaultServAddr,
+			name: "Everything OK with key label",
+			gRPCServerConfig: internal.GRPCServerConfig{
+				Protocol: &defaultProtocol,
+				ServAddr: &defaultServAddr,
+				OkmsId:   &defaultokmsId,
+				TlsConfig: internal.TlsConfig{
+					ClientCertPath: &defaultClientCert,
+					ClientKeyPath:  &defaultClientKey,
+				},
+			},
 			keyAttr:       KeyLabel,
-			okmsId:        defaultokmsId,
-			clientCert:    defaultClientCert,
-			clientKey:     defaultClientKey,
 			expectedError: nil,
 		},
 		{
-			name:          "protocol missing",
-			servAddr:      defaultServAddr,
+			name: "protocol missing",
+			gRPCServerConfig: internal.GRPCServerConfig{
+				ServAddr: &defaultServAddr,
+				OkmsId:   &defaultokmsId,
+				TlsConfig: internal.TlsConfig{
+					ClientCertPath: &defaultClientCert,
+					ClientKeyPath:  &defaultClientKey,
+				},
+			},
 			keyAttr:       KeyId,
-			okmsId:        defaultokmsId,
-			clientCert:    defaultClientCert,
-			clientKey:     defaultClientKey,
 			expectedError: fmt.Errorf("Missing protocol: protocol"),
 		},
 		{
-			name:          "invalid protocol",
-			protocol:      &invalidProtocol,
-			servAddr:      defaultServAddr,
+			name: "invalid protocol",
+			gRPCServerConfig: internal.GRPCServerConfig{
+				Protocol: &invalidProtocol,
+				ServAddr: &defaultServAddr,
+				OkmsId:   &defaultokmsId,
+				TlsConfig: internal.TlsConfig{
+					ClientCertPath: &defaultClientCert,
+					ClientKeyPath:  &defaultClientKey,
+				},
+			},
 			keyAttr:       bothKeyAttr,
-			okmsId:        defaultokmsId,
-			clientCert:    defaultClientCert,
-			clientKey:     defaultClientKey,
 			expectedError: fmt.Errorf("Invalid protocol: %s", invalidProtocol),
 		},
 		{
-			name:          "okmsId missing",
-			protocol:      &restProtocol,
-			servAddr:      defaultServAddr,
+			name: "okmsId missing",
+			gRPCServerConfig: internal.GRPCServerConfig{
+				Protocol: &restProtocol,
+				ServAddr: &defaultServAddr,
+				TlsConfig: internal.TlsConfig{
+					ClientCertPath: &defaultClientCert,
+					ClientKeyPath:  &defaultClientKey,
+				},
+			},
 			keyAttr:       KeyId,
-			clientCert:    defaultClientCert,
-			clientKey:     defaultClientKey,
 			expectedError: fmt.Errorf("Missing okmsId: okms-id"),
 		},
 		{
-			name:          "serv addr missing",
-			protocol:      &defaultProtocol,
-			servAddr:      "",
+			name: "serv addr missing",
+			gRPCServerConfig: internal.GRPCServerConfig{
+				Protocol: &defaultProtocol,
+				OkmsId:   &defaultokmsId,
+				TlsConfig: internal.TlsConfig{
+					ClientCertPath: &defaultClientCert,
+					ClientKeyPath:  &defaultClientKey,
+				},
+			},
 			keyAttr:       KeyId,
-			okmsId:        defaultokmsId,
-			clientCert:    defaultClientCert,
-			clientKey:     defaultClientKey,
 			expectedError: fmt.Errorf("Missing address of the encryption server: serv-addr"),
 		},
 		{
-			name:          "key id/label missing",
-			protocol:      &defaultProtocol,
-			servAddr:      defaultServAddr,
-			keyAttr:       keyAttr.KeyAttributes{},
-			okmsId:        defaultokmsId,
-			clientCert:    defaultClientCert,
-			clientKey:     defaultClientKey,
+			name: "key id/label missing",
+			gRPCServerConfig: internal.GRPCServerConfig{
+				Protocol: &defaultProtocol,
+				ServAddr: &defaultServAddr,
+				OkmsId:   &defaultokmsId,
+				TlsConfig: internal.TlsConfig{
+					ClientCertPath: &defaultClientCert,
+					ClientKeyPath:  &defaultClientKey,
+				},
+			},
+			keyAttr:       internal.KeyAttributes{},
 			expectedError: fmt.Errorf("Missing required key: encryption-key-id | encryption-key-label"),
 		},
 		{
-			name:          "both key id and label provided",
-			protocol:      &defaultProtocol,
-			servAddr:      defaultServAddr,
+			name: "both key id and label provided",
+			gRPCServerConfig: internal.GRPCServerConfig{
+				Protocol: &defaultProtocol,
+				ServAddr: &defaultServAddr,
+				OkmsId:   &defaultokmsId,
+				TlsConfig: internal.TlsConfig{
+					ClientCertPath: &defaultClientCert,
+					ClientKeyPath:  &defaultClientKey,
+				},
+			},
 			keyAttr:       bothKeyAttr,
-			okmsId:        defaultokmsId,
-			clientCert:    defaultClientCert,
-			clientKey:     defaultClientKey,
 			expectedError: fmt.Errorf("Encryption key conflict: only one key parameter allowed (encryption-key-id | encryption-key-label)"),
 		},
 		{
-			name:          "client cert missing",
-			protocol:      &defaultProtocol,
-			servAddr:      defaultServAddr,
+			name: "client cert missing",
+			gRPCServerConfig: internal.GRPCServerConfig{
+				Protocol: &defaultProtocol,
+				ServAddr: &defaultServAddr,
+				OkmsId:   &defaultokmsId,
+				TlsConfig: internal.TlsConfig{
+					ClientKeyPath: &defaultClientKey,
+				},
+			},
 			keyAttr:       KeyId,
-			okmsId:        defaultokmsId,
-			clientKey:     defaultClientKey,
 			expectedError: fmt.Errorf("Missing client certificate: client-cert"),
 		},
 		{
-			name:          "client key missing",
-			protocol:      &defaultProtocol,
-			servAddr:      defaultServAddr,
+			name: "client key missing",
+			gRPCServerConfig: internal.GRPCServerConfig{
+				Protocol: &defaultProtocol,
+				ServAddr: &defaultServAddr,
+				OkmsId:   &defaultokmsId,
+				TlsConfig: internal.TlsConfig{
+					ClientCertPath: &defaultClientCert,
+				},
+			},
 			keyAttr:       bothKeyAttr,
-			okmsId:        defaultokmsId,
-			clientCert:    defaultClientCert,
 			expectedError: fmt.Errorf("Missing client key: client-key"),
 		},
 		{
-			name:          "wrong cert",
-			protocol:      &defaultProtocol,
-			servAddr:      defaultServAddr,
+			name: "wrong cert",
+			gRPCServerConfig: internal.GRPCServerConfig{
+				Protocol: &defaultProtocol,
+				ServAddr: &defaultServAddr,
+				OkmsId:   &defaultokmsId,
+				TlsConfig: internal.TlsConfig{
+					ClientCertPath: &defaultClientKey,
+					ClientKeyPath:  &defaultClientKey,
+				},
+			},
 			keyAttr:       KeyId,
-			okmsId:        defaultokmsId,
-			clientCert:    defaultClientKey,
-			clientKey:     defaultClientKey,
 			expectedError: fmt.Errorf("Could not load certificate: tls: failed to find certificate PEM data in certificate input, but did find a private key; PEM inputs may have been switched"),
 		},
 	}
 
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
-			err := ValidateFlags(tc.protocol, &tc.servAddr, &tc.okmsId, &tc.clientCert, &tc.clientKey, tc.keyAttr)
+			err := ValidateFlags(tc.gRPCServerConfig, tc.keyAttr)
 			if tc.expectedError != nil {
 				assert.EqualError(t, err, tc.expectedError.Error())
 			} else {

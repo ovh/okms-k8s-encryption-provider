@@ -20,7 +20,7 @@ import (
 	"github.com/ovh/kmip-go/ttlv"
 	"k8s.io/kms/pkg/service"
 
-	keyAttr "okms-k8s-encryption-provider/internal"
+	"okms-k8s-encryption-provider/internal"
 )
 
 const (
@@ -46,7 +46,7 @@ type KmipService struct {
 
 var _ service.Service = (*KmipService)(nil)
 
-func NewKmipService(addr string, kmipKey keyAttr.KeyAttributes, opts ...kmipclient.Option) (*KmipService, error) {
+func NewKmipService(addr string, kmipKey internal.KeyAttributes, opts ...kmipclient.Option) (*KmipService, error) {
 	slog.Info("Create a new KMIP client")
 	client, err := kmipclient.Dial(addr, opts...)
 	if err != nil {
@@ -75,7 +75,7 @@ func NewKmipService(addr string, kmipKey keyAttr.KeyAttributes, opts ...kmipclie
 	return kmipService, nil
 }
 
-func retrieveKmipKeyId(client *kmipclient.Client, kmipKey keyAttr.KeyAttributes) (string, error) {
+func retrieveKmipKeyId(client *kmipclient.Client, kmipKey internal.KeyAttributes) (string, error) {
 	if kmipKey.KeyLabel != nil && *kmipKey.KeyLabel != "" {
 		locateResp, err := client.Locate().WithName(*kmipKey.KeyLabel).Exec()
 		if err != nil {
@@ -206,7 +206,7 @@ func (k *KmipService) Close() error {
 
 func (k *KmipService) Validate() (bool, error) {
 	// In case of service key label rotation
-	keyID, err := retrieveKmipKeyId(k.client, keyAttr.KeyAttributes{
+	keyID, err := retrieveKmipKeyId(k.client, internal.KeyAttributes{
 		KeyId:    &k.keyID,
 		KeyLabel: &k.keyLabel,
 	})

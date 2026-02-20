@@ -9,7 +9,23 @@
 
 package internal
 
+import "time"
+
 type KeyAttributes struct {
 	KeyId    *string
 	KeyLabel *string
+}
+
+type GRPCServerConfig struct {
+	SockPath  *string
+	Protocol  *string
+	ServAddr  *string
+	OkmsId    *string
+	TlsConfig TlsConfig
+	Timeout   *time.Duration
+}
+
+type TlsConfig struct {
+	ClientCertPath *string
+	ClientKeyPath  *string
 }
