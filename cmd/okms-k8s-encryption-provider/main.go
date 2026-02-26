@@ -15,35 +15,40 @@ import (
 	"os"
 	"time"
 
+	"okms-k8s-encryption-provider/internal"
 	"okms-k8s-encryption-provider/pkg/kmip"
 	"okms-k8s-encryption-provider/pkg/rest"
 	"okms-k8s-encryption-provider/pkg/validate"
 )
 
 func main() {
-	sockPath := flag.String("sock", "/var/run/okms_etcd_plugin.sock", "Path to the Unix socket")
-	timeout := flag.Duration("timeout", 10*time.Second, "Timeout for the gRPC server")
-	protocol := flag.String("protocol", "", "Protocol to use for encryption (rest|kmip)")
-	servAddr := flag.String("serv-addr", "", "Address of the KMIP server")
-	keyId := flag.String("encryption-key-id", "", "ID of the encryption key to use")
-	okmsId := flag.String("okms-id", "", "Only needed if --protocol is rest\nID of your OKMS domain")
-	clientCert := flag.String("client-cert", "", "Path to the client certificate file")
-	clientKey := flag.String("client-key", "", "Path to the client key file")
+	keyAttr := internal.KeyAttributes{}
+	gRPCServerConfig := internal.GRPCServerConfig{}
+
+	gRPCServerConfig.SockPath = flag.String("sock", "/var/run/okms_etcd_plugin.sock", "Path to the Unix socket")
+	gRPCServerConfig.Timeout = flag.Duration("timeout", 10*time.Second, "Timeout for the gRPC server")
+	gRPCServerConfig.Protocol = flag.String("protocol", "", "Protocol to use for encryption (rest|kmip)")
+	gRPCServerConfig.ServAddr = flag.String("serv-addr", "", "Address of the KMIP server")
+	keyAttr.KeyId = flag.String("encryption-key-id", "", "ID of the encryption key to use")
+	keyAttr.KeyLabel = flag.String("encryption-key-label", "", "Label of the encryption key to use")
+	gRPCServerConfig.OkmsId = flag.String("okms-id", "", "Only needed if --protocol is rest\nID of your OKMS domain")
+	gRPCServerConfig.TlsConfig.ClientCertPath = flag.String("client-cert", "", "Path to the client certificate file")
+	gRPCServerConfig.TlsConfig.ClientKeyPath = flag.String("client-key", "", "Path to the client key file")
 	debug := flag.Bool("debug", false, "Activate debug traces")
 
 	flag.Parse()
 
 	// Validate
-	err := validate.ValidateFlags(protocol, servAddr, keyId, okmsId, clientCert, clientKey)
+	err := validate.ValidateFlags(gRPCServerConfig, keyAttr)
 	if err != nil {
 		slog.Error(err.Error())
 		os.Exit(1)
 	}
 
-	switch *protocol {
+	switch *gRPCServerConfig.Protocol {
 	case "kmip":
-		kmip.KmipEncryption(*servAddr, *clientCert, *clientKey, *keyId, *sockPath, *timeout, *debug)
+		kmip.KmipEncryption(gRPCServerConfig, keyAttr, debug)
 	case "rest":
-		rest.RestEncryption(*servAddr, *clientCert, *clientKey, *keyId, *okmsId, *sockPath, *timeout, *debug)
+		rest.RestEncryption(gRPCServerConfig, keyAttr, debug)
 	}
 }

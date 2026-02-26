@@ -14,31 +14,35 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/ovh/kmip-go/kmipclient"
 	"github.com/ovh/kmip-go/ttlv"
 	"k8s.io/kms/pkg/service"
+
+	"okms-k8s-encryption-provider/internal"
 )
 
-func KmipEncryption(kmipAddr, clientCert, clientKey, kmipKeyId, sockPath string, timeout time.Duration, debug bool) {
+func KmipEncryption(gRPCServerConfig internal.GRPCServerConfig, kmipKey internal.KeyAttributes, debug *bool) {
 	opts := []kmipclient.Option{
-		kmipclient.WithClientCertFiles(clientCert, clientKey),
+		kmipclient.WithClientCertFiles(
+			*gRPCServerConfig.TlsConfig.ClientCertPath,
+			*gRPCServerConfig.TlsConfig.ClientKeyPath,
+		),
 	}
-	if debug {
+	if debug != nil && *debug {
 		opts = append(opts, kmipclient.WithMiddlewares(
 			kmipclient.DebugMiddleware(os.Stderr, ttlv.MarshalXML),
 		))
 	}
 
-	svc, err := NewKmipService(kmipAddr, kmipKeyId, opts...)
+	svc, err := NewKmipService(*gRPCServerConfig.ServAddr, kmipKey, opts...)
 	if err != nil {
 		slog.Error("Could not create a KMIP Service", "err", err)
 		os.Exit(1)
 	}
 	defer svc.Close()
 
-	server := service.NewGRPCService(sockPath, timeout, svc)
+	server := service.NewGRPCService(*gRPCServerConfig.SockPath, *gRPCServerConfig.Timeout, svc)
 	defer server.Close()
 	go func() {
 		slog.Info("Listening...")

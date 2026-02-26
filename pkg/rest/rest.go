@@ -14,19 +14,20 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"k8s.io/kms/pkg/service"
+
+	"okms-k8s-encryption-provider/internal"
 )
 
-func RestEncryption(restAddr, clientCert, clientKey, serviceKeyId, okmsId, sockPath string, timeout time.Duration, debug bool) {
-	svc, err := NewRestAPIService(restAddr, clientCert, clientKey, serviceKeyId, okmsId, debug)
+func RestEncryption(gRPCServerConfig internal.GRPCServerConfig, serviceKey internal.KeyAttributes, debug *bool) {
+	svc, err := NewRestAPIService(gRPCServerConfig, serviceKey, debug)
 	if err != nil {
 		slog.Error(err.Error())
 		os.Exit(1)
 	}
 
-	server := service.NewGRPCService(sockPath, timeout, svc)
+	server := service.NewGRPCService(*gRPCServerConfig.SockPath, *gRPCServerConfig.Timeout, svc)
 	defer server.Close()
 	go func() {
 		slog.Info("Listening...")

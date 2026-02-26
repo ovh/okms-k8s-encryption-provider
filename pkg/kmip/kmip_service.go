@@ -19,6 +19,8 @@ import (
 	"github.com/ovh/kmip-go/kmipclient"
 	"github.com/ovh/kmip-go/ttlv"
 	"k8s.io/kms/pkg/service"
+
+	"okms-k8s-encryption-provider/internal"
 )
 
 const (
@@ -36,22 +38,15 @@ var cryptoParamsPreset = map[string]kmip.CryptographicParameters{
 }
 
 type KmipService struct {
-	client *kmipclient.Client
-	keyID  string
-	alg    string
+	client   *kmipclient.Client
+	keyID    string
+	keyLabel string
+	alg      string
 }
 
 var _ service.Service = (*KmipService)(nil)
 
-func getCryptoParams(alg string) (kmip.CryptographicParameters, error) {
-	cryptoParams, ok := cryptoParamsPreset[alg]
-	if !ok {
-		return kmip.CryptographicParameters{}, fmt.Errorf("unsupported algorithm: %s", alg)
-	}
-	return cryptoParams, nil
-}
-
-func NewKmipService(addr, keyId string, opts ...kmipclient.Option) (*KmipService, error) {
+func NewKmipService(addr string, kmipKey internal.KeyAttributes, opts ...kmipclient.Option) (*KmipService, error) {
 	slog.Info("Create a new KMIP client")
 	client, err := kmipclient.Dial(addr, opts...)
 	if err != nil {
@@ -60,10 +55,16 @@ func NewKmipService(addr, keyId string, opts ...kmipclient.Option) (*KmipService
 	if ttlv.CompareVersions(client.Version(), kmip.V1_2) < 0 {
 		return nil, fmt.Errorf("unsupported KMIP version: %s", client.Version())
 	}
+
+	keyId, err := retrieveKmipKeyId(client, kmipKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve kmip key id: %#v", err)
+	}
 	kmipService := &KmipService{
-		client: client,
-		keyID:  keyId,
-		alg:    "AES_GCM", // Only supported scheme for now
+		client:   client,
+		keyID:    keyId,
+		keyLabel: *kmipKey.KeyLabel,
+		alg:      "AES_GCM", // Only supported scheme for now
 	}
 
 	_, err = kmipService.Validate()
@@ -72,6 +73,29 @@ func NewKmipService(addr, keyId string, opts ...kmipclient.Option) (*KmipService
 	}
 
 	return kmipService, nil
+}
+
+func retrieveKmipKeyId(client *kmipclient.Client, kmipKey internal.KeyAttributes) (string, error) {
+	if kmipKey.KeyLabel != nil && *kmipKey.KeyLabel != "" {
+		locateResp, err := client.Locate().WithName(*kmipKey.KeyLabel).Exec()
+		if err != nil {
+			return "", err
+		}
+		if locateResp == nil || len(locateResp.UniqueIdentifier) == 0 {
+			return "", fmt.Errorf("no key ID found for label %q", *kmipKey.KeyLabel)
+		}
+
+		return locateResp.UniqueIdentifier[0], nil
+	}
+	return *kmipKey.KeyId, nil
+}
+
+func getCryptoParams(alg string) (kmip.CryptographicParameters, error) {
+	cryptoParams, ok := cryptoParamsPreset[alg]
+	if !ok {
+		return kmip.CryptographicParameters{}, fmt.Errorf("unsupported algorithm: %s", alg)
+	}
+	return cryptoParams, nil
 }
 
 // Decrypt implements service.Service.
@@ -181,13 +205,19 @@ func (k *KmipService) Close() error {
 }
 
 func (k *KmipService) Validate() (bool, error) {
-	getKey, err := k.client.Get(k.keyID).Exec()
+	// In case of service key label rotation
+	keyID, err := retrieveKmipKeyId(k.client, internal.KeyAttributes{
+		KeyId:    &k.keyID,
+		KeyLabel: &k.keyLabel,
+	})
+	getKey, err := k.client.Get(keyID).Exec()
 	if err != nil {
 		return false, err
 	}
 	if getKey == nil {
 		return false, fmt.Errorf("No key found with the keyID : %v", k.keyID)
 	}
+	k.keyID = keyID
 
 	keyAttributes, err := k.client.GetAttributes(k.keyID, kmip.AttributeNameCryptographicAlgorithm, kmip.AttributeNameCryptographicUsageMask).Exec()
 	if err != nil {

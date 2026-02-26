@@ -12,19 +12,21 @@ package validate
 import (
 	"crypto/tls"
 	"fmt"
+
+	"okms-k8s-encryption-provider/internal"
 )
 
-func ValidateFlags(protocol, servAddr, keyId, okmsId, clientCert, clientKey *string) error {
-	if err := validateProtocol(protocol, okmsId); err != nil {
+func ValidateFlags(gRPCServerConfig internal.GRPCServerConfig, keyAttr internal.KeyAttributes) error {
+	if err := validateProtocol(gRPCServerConfig.Protocol, gRPCServerConfig.OkmsId); err != nil {
 		return err
 	}
-	if err := validateMTLS(clientCert, clientKey); err != nil {
+	if err := validateMTLS(gRPCServerConfig.TlsConfig.ClientCertPath, gRPCServerConfig.TlsConfig.ClientKeyPath); err != nil {
 		return err
 	}
-	if err := validateEncryptionKey(keyId); err != nil {
+	if err := validateEncryptionKey(keyAttr); err != nil {
 		return err
 	}
-	if err := validateServerAddress(servAddr); err != nil {
+	if err := validateServerAddress(gRPCServerConfig.ServAddr); err != nil {
 		return err
 	}
 
@@ -46,7 +48,6 @@ func validateProtocol(protocol, okmsId *string) error {
 	default:
 		return fmt.Errorf("Invalid protocol: %s", *protocol)
 	}
-
 	return nil
 }
 
@@ -62,13 +63,18 @@ func validateMTLS(clientCert, clientKey *string) error {
 	if err != nil {
 		return fmt.Errorf("Could not load certificate: %v", err)
 	}
-
 	return nil
 }
 
-func validateEncryptionKey(keyId *string) error {
-	if keyId == nil || *keyId == "" {
-		return fmt.Errorf("Missing key Id: encryption-key-id")
+// validateEncryptionKey checks whether a key ID or key label was provided.
+// It returns an error if neither or both are set.
+func validateEncryptionKey(keyAttr internal.KeyAttributes) error {
+	if (keyAttr.KeyId == nil || *keyAttr.KeyId == "") &&
+		(keyAttr.KeyLabel == nil || *keyAttr.KeyLabel == "") {
+		return fmt.Errorf("Missing required key: encryption-key-id | encryption-key-label")
+	} else if keyAttr.KeyId != nil && *keyAttr.KeyId != "" &&
+		keyAttr.KeyLabel != nil && *keyAttr.KeyLabel != "" {
+		return fmt.Errorf("Encryption key conflict: only one key parameter allowed (encryption-key-id | encryption-key-label)")
 	}
 	return nil
 }
