@@ -36,7 +36,7 @@ build-all: clean
 lint:
 	@echo "Running golangci-lint..."
 	@mkdir -p $(BUILD_DIR)
-	golangci-lint run --output.json.path=$(BUILD_DIR)/lint-report.json --output.text.path=stdout || true
+	golangci-lint run --output.json.path=$(BUILD_DIR)/lint-report.json --output.text.path=stdout
 
 # Run tests with coverage and junit report
 test:

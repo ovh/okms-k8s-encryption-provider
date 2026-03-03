@@ -210,6 +210,9 @@ func (k *KmipService) Validate() (bool, error) {
 		KeyId:    &k.keyID,
 		KeyLabel: &k.keyLabel,
 	})
+	if err != nil {
+		return false, err
+	}
 	getKey, err := k.client.Get(keyID).Exec()
 	if err != nil {
 		return false, err
