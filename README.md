@@ -2,7 +2,6 @@
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/ovh/okms-k8s-encryption-provider.svg)](https://pkg.go.dev/github.com/ovh/okms-k8s-encryption-provider)
 [![license](https://img.shields.io/badge/license-Apache%202.0-red.svg?style=flat)](https://raw.githubusercontent.com/ovh/okms-k8s-encryption-provider/master/LICENSE)
-[![test](https://github.com/ovh/okms-k8s-encryption-provider/actions/workflows/test.yaml/badge.svg)](https://github.com/ovh/okms-k8s-encryption-provider/actions/workflows/test.yaml)
 
 ## 📖 Overview
 
