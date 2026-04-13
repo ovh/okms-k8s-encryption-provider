@@ -23,6 +23,8 @@ The binary can be installed directly from go packages.
 go install github.com/ovh/okms-k8s-encryption-provider@latest
 ```
 
+Download from the [latest release](https://github.com/ovh/okms-k8s-encryption-provider/releases/latest). 
+
 Or you can build from sources.
 
 ```bash
