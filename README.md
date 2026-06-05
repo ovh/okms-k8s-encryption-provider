@@ -93,39 +93,46 @@ We recommend you to read the following documentation beforehand:
 The encryption provider can be run on the kube-apiserver hosts directly with the following command line:
 
 KMIP protocol:
+
 ```bash
 ./okms-k8s-encryption-provider \
--protocol "kmip" \
--client-cert "~/.ovh-kms/cert.pem" \
--client-key "~/.ovh-kms/key.pem" \ 
--serv-addr "eu-west-par.okms.ovh.net:5696" \  # kmip server
--encryption-key-id "70001308-5674-43fe-93dd-6270ecac0710" # kmip key id
+  --protocol kmip \
+  --serv-addr eu-west-par.okms.ovh.net:5696 \
+  --encryption-key-id 70001308-5674-43fe-93dd-6270ecac0710 \
+  --client-cert ~/.ovh-kms/cert.pem \
+  --client-key ~/.ovh-kms/key.pem
 ```
 
 REST protocol:
+
 ```bash
 ./okms-k8s-encryption-provider \
--protocol "rest" \
--client-cert "~/.ovh-kms/cert.pem" \
--client-key "~/.ovh-kms/key.pem" \ 
--serv-addr "https://eu-west-rbx.okms.ovh.net" \  # okms addr
--okms-id "113d1c44-2b1d-239c-a929-c11bd1847057" \
--encryption-key-id "70001308-5674-43fe-93dd-6270ecac0710" # service key id
+  --protocol rest \
+  --serv-addr https://eu-west-rbx.okms.ovh.net \
+  --okms-id 113d1c44-2b1d-239c-a929-c11bd1847057 \
+  --encryption-key-id 70001308-5674-43fe-93dd-6270ecac0710 \
+  --client-cert ~/.ovh-kms/cert.pem \
+  --client-key ~/.ovh-kms/key.pem
 ```
 
 Where `cert.pem` and `key.pem` are your access certificate to your OKMS.
 
-| Flag | Description | Default |
-|------|-------------|---------|
-| `--protocol` | Protocol to use. Either "kmip" or "rest". | `""` (required) |
-| `--sock` | Path to the Unix socket the provider will listen on. Should be mounted inside the Kubernetes apiserver | `/var/run/okms_etcd_plugin.sock` |
-| `--timeout` | Timeout for the gRPC server operations. | `10s` |
-| `--serv-addr` | Address of the encryption server. Can be found in the [OVHcloud manager](https://www.ovh.com/manager) page of your KMS. (e.g for KMIP: `eu-west-rbx.okms.ovh.net:5696`, Rest: `https://eu-west-rbx.okms.ovh.net`) | `""` (required) |
-| `--encryption-key-id` | Identifier of the encryption key to use on the KMIP/REST server. | `""` (required) |
-| `--okms-id` | Identifier of your OKMS. | `""` (required if protocol="rest") |
-| `--client-cert` | Path to the client certificate file for [mutual TLS authentication with the KMS](https://help.ovhcloud.com/csm/en-gb-okms-certificate-management?id=kb_article_view&sysparm_article=KB0072599). | `""` (required) |
-| `--client-key` | Path to the private key file associated with the client certificate. | `""` (required)|
-| `--debug` | Activate debug traces. | `false` |
+All flags can also be set via environment variables (the flag value takes precedence if both are provided).
+
+| Flag | Env var | Description | Default |
+|------|---------|-------------|---------|
+| `--protocol` | `OKMS_PROTOCOL` | Protocol to use. Either "kmip" or "rest". | `""` (required) |
+| `--serv-addr` | `OKMS_SERV_ADDR` | Address of the encryption server. Can be found in the [OVHcloud manager](https://www.ovh.com/manager) page of your KMS. (e.g for KMIP: `eu-west-rbx.okms.ovh.net:5696`, REST: `https://eu-west-rbx.okms.ovh.net`) | `""` (required) |
+| `--encryption-key-id` | `OKMS_KEY_ID` | Identifier of the encryption key to use on the KMIP/REST server. | `""` (required\*) |
+| `--encryption-key-label` | `OKMS_KEY_LABEL` | Label of the encryption key to use on the KMIP/REST server. | `""` (required\*) |
+| `--okms-id` | `OKMS_ID` | Identifier of your OKMS. | `""` (required if `--protocol rest`) |
+| `--client-cert` | `OKMS_CLIENT_CERT` | Path to the client certificate file for [mutual TLS authentication with the KMS](https://help.ovhcloud.com/csm/en-gb-okms-certificate-management?id=kb_article_view&sysparm_article=KB0072599). | `""` (required) |
+| `--client-key` | `OKMS_CLIENT_KEY` | Path to the private key file associated with the client certificate. | `""` (required) |
+| `--sock` | `OKMS_SOCK` | Path to the Unix socket the provider will listen on. Should be mounted inside the Kubernetes apiserver. | `/var/run/okms_etcd_plugin.sock` |
+| `--timeout` | `OKMS_TIMEOUT` | Timeout for the gRPC server operations. | `10s` |
+| `--debug` | `OKMS_DEBUG` | Activate debug traces. | `false` |
+
+\* provide exactly one of `--encryption-key-id` or `--encryption-key-label`.
 
 ### ⚙️ Kubernetes' configuration
 

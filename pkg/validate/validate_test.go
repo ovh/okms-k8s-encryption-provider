@@ -113,7 +113,7 @@ func TestValidateFlags(t *testing.T) {
 				},
 			},
 			keyAttr:       KeyId,
-			expectedError: fmt.Errorf("Missing protocol: protocol"),
+			expectedError: fmt.Errorf("Missing required flag --protocol: must be one of: rest, kmip"),
 		},
 		{
 			name: "invalid protocol",
@@ -127,7 +127,7 @@ func TestValidateFlags(t *testing.T) {
 				},
 			},
 			keyAttr:       bothKeyAttr,
-			expectedError: fmt.Errorf("Invalid protocol: %s", invalidProtocol),
+			expectedError: fmt.Errorf("Invalid protocol %q: must be one of: rest, kmip", invalidProtocol),
 		},
 		{
 			name: "okmsId missing",
@@ -140,7 +140,7 @@ func TestValidateFlags(t *testing.T) {
 				},
 			},
 			keyAttr:       KeyId,
-			expectedError: fmt.Errorf("Missing okmsId: okms-id"),
+			expectedError: fmt.Errorf("Missing required flag --okms-id (required when --protocol rest)"),
 		},
 		{
 			name: "serv addr missing",
@@ -153,7 +153,7 @@ func TestValidateFlags(t *testing.T) {
 				},
 			},
 			keyAttr:       KeyId,
-			expectedError: fmt.Errorf("Missing address of the encryption server: serv-addr"),
+			expectedError: fmt.Errorf("Missing required flag --serv-addr"),
 		},
 		{
 			name: "key id/label missing",
@@ -167,7 +167,7 @@ func TestValidateFlags(t *testing.T) {
 				},
 			},
 			keyAttr:       internal.KeyAttributes{},
-			expectedError: fmt.Errorf("Missing required key: encryption-key-id | encryption-key-label"),
+			expectedError: fmt.Errorf("Missing required flag --encryption-key-id or --encryption-key-label"),
 		},
 		{
 			name: "both key id and label provided",
@@ -181,7 +181,7 @@ func TestValidateFlags(t *testing.T) {
 				},
 			},
 			keyAttr:       bothKeyAttr,
-			expectedError: fmt.Errorf("Encryption key conflict: only one key parameter allowed (encryption-key-id | encryption-key-label)"),
+			expectedError: fmt.Errorf("Flag conflict: use --encryption-key-id or --encryption-key-label, not both"),
 		},
 		{
 			name: "client cert missing",
@@ -194,7 +194,7 @@ func TestValidateFlags(t *testing.T) {
 				},
 			},
 			keyAttr:       KeyId,
-			expectedError: fmt.Errorf("Missing client certificate: client-cert"),
+			expectedError: fmt.Errorf("Missing required flag --client-cert"),
 		},
 		{
 			name: "client key missing",
@@ -207,7 +207,7 @@ func TestValidateFlags(t *testing.T) {
 				},
 			},
 			keyAttr:       bothKeyAttr,
-			expectedError: fmt.Errorf("Missing client key: client-key"),
+			expectedError: fmt.Errorf("Missing required flag --client-key"),
 		},
 		{
 			name: "wrong cert",
