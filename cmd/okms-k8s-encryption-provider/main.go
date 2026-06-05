@@ -34,6 +34,7 @@ func main() {
 	gRPCServerConfig.OkmsId = flag.String("okms-id", "", "Only needed if --protocol is rest\nID of your OKMS domain")
 	gRPCServerConfig.TlsConfig.ClientCertPath = flag.String("client-cert", "", "Path to the client certificate file")
 	gRPCServerConfig.TlsConfig.ClientKeyPath = flag.String("client-key", "", "Path to the client key file")
+	gRPCServerConfig.AccessToken = flag.String("access-token", "", "Personal Access Token for REST authentication (alternative to --client-cert/--client-key)")
 	debug := flag.Bool("debug", false, "Activate debug traces")
 
 	flag.Parse()

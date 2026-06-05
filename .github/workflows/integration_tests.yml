@@ -1,0 +1,26 @@
+name: Integration Tests
+
+on: [push]
+
+jobs:
+  integration-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+
+      - name: Run integration tests
+        env:
+          OKMS_REST_SERV_ADDR:       ${{ secrets.OKMS_REST_SERV_ADDR }}
+          OKMS_REST_ID:              ${{ secrets.OKMS_REST_ID }}
+          OKMS_REST_KEY_ID:          ${{ secrets.OKMS_REST_KEY_ID }}
+          OKMS_REST_ACCESS_TOKEN:    ${{ secrets.OKMS_REST_ACCESS_TOKEN }}
+          OKMS_CLIENT_CERT_B64:      ${{ secrets.OKMS_CLIENT_CERT_B64 }}
+          OKMS_CLIENT_KEY_B64:       ${{ secrets.OKMS_CLIENT_KEY_B64 }}
+          OKMS_KMIP_SERV_ADDR:       ${{ secrets.OKMS_KMIP_SERV_ADDR }}
+          OKMS_KMIP_KEY_ID:          ${{ secrets.OKMS_KMIP_KEY_ID }}
+        run: go test -v -tags integration -timeout 120s ./test/integration/...

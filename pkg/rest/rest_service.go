@@ -38,12 +38,18 @@ func NewRestAPIService(gRPCServerConfig internal.GRPCServerConfig, serviceKey in
 	slog.Info("Create a new Rest API client")
 
 	// Client configuration
-	clientCfg, err := configureClientWithMTLS(
-		*gRPCServerConfig.TlsConfig.ClientCertPath,
-		*gRPCServerConfig.TlsConfig.ClientKeyPath,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("could not create rest api client: %w", err)
+	var clientCfg okms.ClientConfig
+	if gRPCServerConfig.AccessToken != nil && *gRPCServerConfig.AccessToken != "" {
+		clientCfg = configureClientWithPAT()
+	} else {
+		var err error
+		clientCfg, err = configureClientWithMTLS(
+			*gRPCServerConfig.TlsConfig.ClientCertPath,
+			*gRPCServerConfig.TlsConfig.ClientKeyPath,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("could not create rest api client: %w", err)
+		}
 	}
 	if debug != nil && *debug {
 		clientCfg.Middleware = okms.DebugTransport(os.Stderr)
@@ -53,6 +59,9 @@ func NewRestAPIService(gRPCServerConfig internal.GRPCServerConfig, serviceKey in
 	restClient, err := okms.NewRestAPIClient(*gRPCServerConfig.ServAddr, clientCfg)
 	if err != nil {
 		return nil, fmt.Errorf("could not create rest api client: %w", err)
+	}
+	if gRPCServerConfig.AccessToken != nil && *gRPCServerConfig.AccessToken != "" {
+		restClient.WithCustomHeader("Authorization", "Bearer "+*gRPCServerConfig.AccessToken)
 	}
 	if restClient == nil {
 		return nil, errors.New("could not create rest api client: retrieved nil rest api client")
@@ -119,6 +128,12 @@ func retrieveServiceKeyId(restClient *okms.Client, okmsUUID uuid.UUID, serviceKe
 
 	serviceKeyUUID, err := uuid.Parse(*serviceKey.KeyId)
 	return *serviceKey.KeyId, serviceKeyUUID, err
+}
+
+func configureClientWithPAT() okms.ClientConfig {
+	return okms.ClientConfig{
+		TlsCfg: &tls.Config{MinVersion: tls.VersionTLS12},
+	}
 }
 
 func configureClientWithMTLS(clientCertPath, clientKeyPath string) (okms.ClientConfig, error) {
