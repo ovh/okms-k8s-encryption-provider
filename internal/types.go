@@ -17,12 +17,13 @@ type KeyAttributes struct {
 }
 
 type GRPCServerConfig struct {
-	SockPath  *string
-	Protocol  *string
-	ServAddr  *string
-	OkmsId    *string
-	TlsConfig TlsConfig
-	Timeout   *time.Duration
+	SockPath    *string
+	Protocol    *string
+	ServAddr    *string
+	OkmsId      *string
+	TlsConfig   TlsConfig
+	Timeout     *time.Duration
+	AccessToken *string
 }
 
 type TlsConfig struct {

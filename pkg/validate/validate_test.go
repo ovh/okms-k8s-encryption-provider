@@ -223,6 +223,42 @@ func TestValidateFlags(t *testing.T) {
 			keyAttr:       KeyId,
 			expectedError: fmt.Errorf("Could not load certificate: tls: failed to find certificate PEM data in certificate input, but did find a private key; PEM inputs may have been switched"),
 		},
+		{
+			name: "access token with REST protocol",
+			gRPCServerConfig: internal.GRPCServerConfig{
+				Protocol:    &restProtocol,
+				ServAddr:    &defaultServAddr,
+				OkmsId:      &defaultokmsId,
+				AccessToken: func() *string { s := "my-pat-token"; return &s }(),
+			},
+			keyAttr:       KeyId,
+			expectedError: nil,
+		},
+		{
+			name: "access token not supported with KMIP",
+			gRPCServerConfig: internal.GRPCServerConfig{
+				Protocol:    &defaultProtocol,
+				ServAddr:    &defaultServAddr,
+				OkmsId:      &defaultokmsId,
+				AccessToken: func() *string { s := "my-pat-token"; return &s }(),
+			},
+			keyAttr:       KeyId,
+			expectedError: fmt.Errorf("--access-token is not supported with --protocol kmip"),
+		},
+		{
+			name: "access token and client cert conflict",
+			gRPCServerConfig: internal.GRPCServerConfig{
+				Protocol:    &restProtocol,
+				ServAddr:    &defaultServAddr,
+				OkmsId:      &defaultokmsId,
+				AccessToken: func() *string { s := "my-pat-token"; return &s }(),
+				TlsConfig: internal.TlsConfig{
+					ClientCertPath: &defaultClientCert,
+				},
+			},
+			keyAttr:       KeyId,
+			expectedError: fmt.Errorf("Authentication conflict: use --access-token or --client-cert/--client-key, not both"),
+		},
 	}
 
 	for _, tc := range tcs {

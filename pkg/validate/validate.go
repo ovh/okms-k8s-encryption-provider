@@ -20,7 +20,7 @@ func ValidateFlags(gRPCServerConfig internal.GRPCServerConfig, keyAttr internal.
 	if err := validateProtocol(gRPCServerConfig.Protocol, gRPCServerConfig.OkmsId); err != nil {
 		return err
 	}
-	if err := validateMTLS(gRPCServerConfig.TlsConfig.ClientCertPath, gRPCServerConfig.TlsConfig.ClientKeyPath); err != nil {
+	if err := validateAuth(gRPCServerConfig); err != nil {
 		return err
 	}
 	if err := validateEncryptionKey(keyAttr); err != nil {
@@ -51,15 +51,27 @@ func validateProtocol(protocol, okmsId *string) error {
 	return nil
 }
 
-func validateMTLS(clientCert, clientKey *string) error {
-	if clientCert == nil || *clientCert == "" {
+func validateAuth(gRPCServerConfig internal.GRPCServerConfig) error {
+	hasCert := gRPCServerConfig.TlsConfig.ClientCertPath != nil && *gRPCServerConfig.TlsConfig.ClientCertPath != ""
+	hasKey := gRPCServerConfig.TlsConfig.ClientKeyPath != nil && *gRPCServerConfig.TlsConfig.ClientKeyPath != ""
+	hasToken := gRPCServerConfig.AccessToken != nil && *gRPCServerConfig.AccessToken != ""
+
+	if hasToken && (hasCert || hasKey) {
+		return fmt.Errorf("Authentication conflict: use --access-token or --client-cert/--client-key, not both")
+	}
+	if hasToken {
+		if *gRPCServerConfig.Protocol == "kmip" {
+			return fmt.Errorf("--access-token is not supported with --protocol kmip")
+		}
+		return nil
+	}
+	if !hasCert {
 		return fmt.Errorf("Missing client certificate: client-cert")
 	}
-	if clientKey == nil || *clientKey == "" {
+	if !hasKey {
 		return fmt.Errorf("Missing client key: client-key")
 	}
-
-	_, err := tls.LoadX509KeyPair(*clientCert, *clientKey)
+	_, err := tls.LoadX509KeyPair(*gRPCServerConfig.TlsConfig.ClientCertPath, *gRPCServerConfig.TlsConfig.ClientKeyPath)
 	if err != nil {
 		return fmt.Errorf("Could not load certificate: %v", err)
 	}
