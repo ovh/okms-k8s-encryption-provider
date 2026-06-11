@@ -35,30 +35,30 @@ func ValidateFlags(gRPCServerConfig internal.GRPCServerConfig, keyAttr internal.
 
 func validateProtocol(protocol, okmsId *string) error {
 	if protocol == nil {
-		return fmt.Errorf("Missing protocol: protocol")
+		return fmt.Errorf("Missing required flag --protocol: must be one of: rest, kmip")
 	}
-
 	switch *protocol {
 	case "rest":
 		if okmsId == nil || *okmsId == "" {
-			return fmt.Errorf("Missing okmsId: okms-id")
+			return fmt.Errorf("Missing required flag --okms-id (required when --protocol rest)")
 		}
 	case "kmip":
 		// nothing to do
+	case "":
+		return fmt.Errorf("Missing required flag --protocol: must be one of: rest, kmip")
 	default:
-		return fmt.Errorf("Invalid protocol: %s", *protocol)
+		return fmt.Errorf("Invalid protocol %q: must be one of: rest, kmip", *protocol)
 	}
 	return nil
 }
 
 func validateMTLS(clientCert, clientKey *string) error {
 	if clientCert == nil || *clientCert == "" {
-		return fmt.Errorf("Missing client certificate: client-cert")
+		return fmt.Errorf("Missing required flag --client-cert")
 	}
 	if clientKey == nil || *clientKey == "" {
-		return fmt.Errorf("Missing client key: client-key")
+		return fmt.Errorf("Missing required flag --client-key")
 	}
-
 	_, err := tls.LoadX509KeyPair(*clientCert, *clientKey)
 	if err != nil {
 		return fmt.Errorf("Could not load certificate: %v", err)
@@ -71,17 +71,17 @@ func validateMTLS(clientCert, clientKey *string) error {
 func validateEncryptionKey(keyAttr internal.KeyAttributes) error {
 	if (keyAttr.KeyId == nil || *keyAttr.KeyId == "") &&
 		(keyAttr.KeyLabel == nil || *keyAttr.KeyLabel == "") {
-		return fmt.Errorf("Missing required key: encryption-key-id | encryption-key-label")
+		return fmt.Errorf("Missing required flag --encryption-key-id or --encryption-key-label")
 	} else if keyAttr.KeyId != nil && *keyAttr.KeyId != "" &&
 		keyAttr.KeyLabel != nil && *keyAttr.KeyLabel != "" {
-		return fmt.Errorf("Encryption key conflict: only one key parameter allowed (encryption-key-id | encryption-key-label)")
+		return fmt.Errorf("Flag conflict: use --encryption-key-id or --encryption-key-label, not both")
 	}
 	return nil
 }
 
 func validateServerAddress(servAddr *string) error {
 	if servAddr == nil || *servAddr == "" {
-		return fmt.Errorf("Missing address of the encryption server: serv-addr")
+		return fmt.Errorf("Missing required flag --serv-addr")
 	}
 	return nil
 }

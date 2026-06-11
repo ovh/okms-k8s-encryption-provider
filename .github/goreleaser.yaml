@@ -7,6 +7,8 @@ before:
 builds:
   - id: okms-k8s-encryption-provider
     main: ./cmd/okms-k8s-encryption-provider
+    ldflags:
+      - -X main.version={{.Version}}
     env:
       - CGO_ENABLED=0
     goos:
