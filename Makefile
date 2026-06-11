@@ -1,4 +1,4 @@
-.PHONY: build build-all test lint clean help
+.PHONY: build build-all test lint clean help tool 
 
 BUILD_DIR := build
 BINARY_NAME := okms-k8s-encryption-provider
@@ -33,7 +33,7 @@ build-all: clean
 	@echo "Build complete. Artifacts in $(DIST_DIR)/"
 
 # Lint code with golangci-lint
-lint:
+lint: tool
 	@echo "Running golangci-lint..."
 	@mkdir -p $(BUILD_DIR)
 	golangci-lint run --output.json.path=$(BUILD_DIR)/lint-report.json --output.text.path=stdout
@@ -63,3 +63,9 @@ help:
 	@echo ""
 	@echo "Environment variables:"
 	@echo "  GIT_VERSION    - Version/tag to embed in binary (default: git describe or dev)"
+
+
+tool:
+	@echo " > Installing tools..."
+	GOBIN=$(BIN_DIR) go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.11.3
+	GOBIN=$(BIN_DIR) go install gotest.tools/gotestsum@v1.13.0

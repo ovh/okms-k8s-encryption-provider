@@ -17,15 +17,53 @@
 
 ## 📦 Installation
 
-The binary can be installed directly from go packages.
+### Installation command
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ovh/okms-k8s-encryption-provider/main/install.sh | sh
+```
+
+The binary is installed in `$HOME/.local/bin` by default (created if it does not exist). Make sure this directory is in your `PATH`.
+
+**Install a specific version**:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ovh/okms-k8s-encryption-provider/main/install.sh | sh -s <version>
+```
+
+**Custom installation directory**:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ovh/okms-k8s-encryption-provider/main/install.sh | sh -s -- -b <path>
+```
+
+### Binary download
+
+1. Download [latest release](https://github.com/ovh/okms-k8s-encryption-provider/releases/latest)
+2. Untar / unzip the archive
+3. Add the containing folder to your `PATH` environment variable, or move the binary into a directory that is already in your `PATH`
+
+### Install from the source
+
+Requires Go to be installed on your system.
+
+**Using `go install`**:
 
 ```bash
 go install github.com/ovh/okms-k8s-encryption-provider@latest
 ```
 
-Download from the [latest release](https://github.com/ovh/okms-k8s-encryption-provider/releases/latest). 
+**Using `make`**:
 
-Or you can build from sources.
+```bash
+git clone https://github.com/ovh/okms-k8s-encryption-provider.git
+cd okms-k8s-encryption-provider
+make install # installs to /usr/local/bin by default
+# or:
+make install PREFIX=$HOME/.local # installs to $HOME/.local/bin
+```
+
+**Building from source**:
 
 ```bash
 git clone https://github.com/ovh/okms-k8s-encryption-provider.git
