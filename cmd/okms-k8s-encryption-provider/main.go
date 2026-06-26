@@ -34,6 +34,7 @@ var envVars = []struct{ flag, env string }{
 	{"encryption-key-label", "OKMS_KEY_LABEL"},
 	{"client-cert", "OKMS_CLIENT_CERT"},
 	{"client-key", "OKMS_CLIENT_KEY"},
+	{"ca", "OKMS_CA_CERT"},
 	{"debug", "OKMS_DEBUG"},
 }
 
@@ -78,7 +79,7 @@ var flagGroups = []flagGroup{
 	},
 	{
 		header: "AUTHENTICATION",
-		names:  []string{"client-cert", "client-key"},
+		names:  []string{"client-cert", "client-key", "ca"},
 	},
 	{
 		header: "ADVANCED",
@@ -134,7 +135,8 @@ func usage() {
     --serv-addr eu-west-rbx.okms.ovh.net:5696 \
     --encryption-key-id <key-id> \
     --client-cert /path/to/client.crt \
-    --client-key /path/to/client.key
+		--client-key /path/to/client.key \
+		--ca /path/to/ca.crt
 
   # REST protocol
   okms-k8s-encryption-provider \
@@ -143,7 +145,8 @@ func usage() {
     --okms-id <okms-domain-id> \
     --encryption-key-id <key-id> \
     --client-cert /path/to/client.crt \
-    --client-key /path/to/client.key
+		--client-key /path/to/client.key \
+		--ca /path/to/ca.crt
 `)
 }
 
@@ -161,6 +164,7 @@ func main() {
 	gRPCServerConfig.OkmsId = flag.String("okms-id", "", "ID of your OKMS domain")
 	gRPCServerConfig.TlsConfig.ClientCertPath = flag.String("client-cert", "", "Path to the client certificate file")
 	gRPCServerConfig.TlsConfig.ClientKeyPath = flag.String("client-key", "", "Path to the client key file")
+	gRPCServerConfig.TlsConfig.CACertPath = flag.String("ca", "", "Path to a PEM-encoded CA certificate used to verify the KMS server certificate")
 	debug := flag.Bool("debug", false, "Activate debug traces")
 
 	flag.Usage = usage

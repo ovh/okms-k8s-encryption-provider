@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: okms-k8s-encryption-provider
+  namespace: kube-system
+spec:
+  containers:
+  - name: provider
+    image: ghcr.io/ovh/okms-k8s-encryption-provider:latest
+    args:
+    - --protocol=kmip
+    - --serv-addr=eu-west-rbx.okms.ovh.net:5696
+    - --encryption-key-id=70001308-5674-43fe-93dd-6270ecac0710
+    - --client-cert=/etc/okms/tls/client.crt
+    - --client-key=/etc/okms/tls/client.key
+    - --ca=/etc/okms/tls/ca.crt
+    - --sock=/var/run/okms_etcd_plugin.sock
+    volumeMounts:
+    - name: okms-tls
+      mountPath: /etc/okms/tls
+      readOnly: true
+    - name: okms-socket
+      mountPath: /var/run
+  volumes:
+  - name: okms-tls
+    secret:
+      secretName: okms-client-and-ca
+  - name: okms-socket
+    hostPath:
+      path: /var/run
+      type: Directory

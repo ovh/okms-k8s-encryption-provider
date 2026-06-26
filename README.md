@@ -100,7 +100,8 @@ KMIP protocol:
   --serv-addr eu-west-par.okms.ovh.net:5696 \
   --encryption-key-id 70001308-5674-43fe-93dd-6270ecac0710 \
   --client-cert ~/.ovh-kms/cert.pem \
-  --client-key ~/.ovh-kms/key.pem
+  --client-key ~/.ovh-kms/key.pem \
+  --ca ~/.ovh-kms/ca.pem
 ```
 
 REST protocol:
@@ -112,10 +113,13 @@ REST protocol:
   --okms-id 113d1c44-2b1d-239c-a929-c11bd1847057 \
   --encryption-key-id 70001308-5674-43fe-93dd-6270ecac0710 \
   --client-cert ~/.ovh-kms/cert.pem \
-  --client-key ~/.ovh-kms/key.pem
+  --client-key ~/.ovh-kms/key.pem \
+  --ca ~/.ovh-kms/ca.pem
 ```
 
 Where `cert.pem` and `key.pem` are your access certificate to your OKMS.
+If your KMS server certificate is signed by a private CA, provide that CA certificate with `--ca`.
+When `--ca` is not set, the provider uses the system trust store.
 
 All flags can also be set via environment variables (the flag value takes precedence if both are provided).
 
@@ -128,11 +132,14 @@ All flags can also be set via environment variables (the flag value takes preced
 | `--okms-id` | `OKMS_ID` | Identifier of your OKMS. | `""` (required if `--protocol rest`) |
 | `--client-cert` | `OKMS_CLIENT_CERT` | Path to the client certificate file for [mutual TLS authentication with the KMS](https://help.ovhcloud.com/csm/en-gb-okms-certificate-management?id=kb_article_view&sysparm_article=KB0072599). | `""` (required) |
 | `--client-key` | `OKMS_CLIENT_KEY` | Path to the private key file associated with the client certificate. | `""` (required) |
+| `--ca` | `OKMS_CA_CERT` | Optional path to a PEM-encoded CA certificate used to verify the KMS server certificate. | `""` |
 | `--sock` | `OKMS_SOCK` | Path to the Unix socket the provider will listen on. Should be mounted inside the Kubernetes apiserver. | `/var/run/okms_etcd_plugin.sock` |
 | `--timeout` | `OKMS_TIMEOUT` | Timeout for the gRPC server operations. | `10s` |
 | `--debug` | `OKMS_DEBUG` | Activate debug traces. | `false` |
 
 \* provide exactly one of `--encryption-key-id` or `--encryption-key-label`.
+
+Private CA static pod example: [examples/provider-private-ca.yaml](examples/provider-private-ca.yaml)
 
 ### ⚙️ Kubernetes' configuration
 
