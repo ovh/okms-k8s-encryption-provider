@@ -73,7 +73,7 @@ func validateMTLS(clientCert, clientKey, caCert *string) error {
 
 		caPool := x509.NewCertPool()
 		if ok := caPool.AppendCertsFromPEM(caPEM); !ok {
-			return fmt.Errorf("Could not load CA certificate from --ca: invalid PEM certificate")
+			return fmt.Errorf("Could not load CA certificate: invalid PEM certificate")
 		}
 	}
 	return nil
