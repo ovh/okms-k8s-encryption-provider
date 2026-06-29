@@ -135,8 +135,8 @@ func usage() {
     --serv-addr eu-west-rbx.okms.ovh.net:5696 \
     --encryption-key-id <key-id> \
     --client-cert /path/to/client.crt \
-		--client-key /path/to/client.key \
-		--ca /path/to/ca.crt
+	--client-key /path/to/client.key \
+	--ca /path/to/ca.crt
 
   # REST protocol
   okms-k8s-encryption-provider \
@@ -145,8 +145,8 @@ func usage() {
     --okms-id <okms-domain-id> \
     --encryption-key-id <key-id> \
     --client-cert /path/to/client.crt \
-		--client-key /path/to/client.key \
-		--ca /path/to/ca.crt
+	--client-key /path/to/client.key \
+	--ca /path/to/ca.crt
 `)
 }
 
