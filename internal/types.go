@@ -28,4 +28,5 @@ type GRPCServerConfig struct {
 type TlsConfig struct {
 	ClientCertPath *string
 	ClientKeyPath  *string
+	CACertPath     *string
 }

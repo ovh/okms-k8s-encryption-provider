@@ -11,7 +11,9 @@ package validate
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"os"
 
 	"okms-k8s-encryption-provider/internal"
 )
@@ -20,7 +22,7 @@ func ValidateFlags(gRPCServerConfig internal.GRPCServerConfig, keyAttr internal.
 	if err := validateProtocol(gRPCServerConfig.Protocol, gRPCServerConfig.OkmsId); err != nil {
 		return err
 	}
-	if err := validateMTLS(gRPCServerConfig.TlsConfig.ClientCertPath, gRPCServerConfig.TlsConfig.ClientKeyPath); err != nil {
+	if err := validateMTLS(gRPCServerConfig.TlsConfig.ClientCertPath, gRPCServerConfig.TlsConfig.ClientKeyPath, gRPCServerConfig.TlsConfig.CACertPath); err != nil {
 		return err
 	}
 	if err := validateEncryptionKey(keyAttr); err != nil {
@@ -52,7 +54,7 @@ func validateProtocol(protocol, okmsId *string) error {
 	return nil
 }
 
-func validateMTLS(clientCert, clientKey *string) error {
+func validateMTLS(clientCert, clientKey, caCert *string) error {
 	if clientCert == nil || *clientCert == "" {
 		return fmt.Errorf("Missing required flag --client-cert")
 	}
@@ -62,6 +64,17 @@ func validateMTLS(clientCert, clientKey *string) error {
 	_, err := tls.LoadX509KeyPair(*clientCert, *clientKey)
 	if err != nil {
 		return fmt.Errorf("Could not load certificate: %v", err)
+	}
+	if caCert != nil && *caCert != "" {
+		caPEM, err := os.ReadFile(*caCert)
+		if err != nil {
+			return fmt.Errorf("Could not load CA certificate from --ca: %v", err)
+		}
+
+		caPool := x509.NewCertPool()
+		if ok := caPool.AppendCertsFromPEM(caPEM); !ok {
+			return fmt.Errorf("Could not load CA certificate: invalid PEM certificate")
+		}
 	}
 	return nil
 }

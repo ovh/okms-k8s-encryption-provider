@@ -12,6 +12,7 @@ package rest
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -41,6 +42,7 @@ func NewRestAPIService(gRPCServerConfig internal.GRPCServerConfig, serviceKey in
 	clientCfg, err := configureClientWithMTLS(
 		*gRPCServerConfig.TlsConfig.ClientCertPath,
 		*gRPCServerConfig.TlsConfig.ClientKeyPath,
+		gRPCServerConfig.TlsConfig.CACertPath,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("could not create rest api client: %w", err)
@@ -121,7 +123,7 @@ func retrieveServiceKeyId(restClient *okms.Client, okmsUUID uuid.UUID, serviceKe
 	return *serviceKey.KeyId, serviceKeyUUID, err
 }
 
-func configureClientWithMTLS(clientCertPath, clientKeyPath string) (okms.ClientConfig, error) {
+func configureClientWithMTLS(clientCertPath, clientKeyPath string, caCertPath *string) (okms.ClientConfig, error) {
 	clientCertBytes, err := os.ReadFile(clientCertPath)
 	if err != nil {
 		return okms.ClientConfig{}, err
@@ -134,11 +136,31 @@ func configureClientWithMTLS(clientCertPath, clientKeyPath string) (okms.ClientC
 	if err != nil {
 		return okms.ClientConfig{}, err
 	}
+
+	tlsCfg := &tls.Config{
+		MinVersion:   tls.VersionTLS12,
+		Certificates: []tls.Certificate{tlsCert},
+	}
+
+	if caCertPath != nil && *caCertPath != "" {
+		roots, err := x509.SystemCertPool()
+		if err != nil || roots == nil {
+			roots = x509.NewCertPool()
+		}
+
+		caCertBytes, err := os.ReadFile(*caCertPath)
+		if err != nil {
+			return okms.ClientConfig{}, err
+		}
+		if ok := roots.AppendCertsFromPEM(caCertBytes); !ok {
+			return okms.ClientConfig{}, fmt.Errorf("invalid CA certificate PEM")
+		}
+
+		tlsCfg.RootCAs = roots
+	}
+
 	clientCfg := okms.ClientConfig{
-		TlsCfg: &tls.Config{
-			MinVersion:   tls.VersionTLS12,
-			Certificates: []tls.Certificate{tlsCert},
-		},
+		TlsCfg: tlsCfg,
 	}
 
 	return clientCfg, nil

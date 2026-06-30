@@ -29,6 +29,9 @@ func KmipEncryption(gRPCServerConfig internal.GRPCServerConfig, kmipKey internal
 			*gRPCServerConfig.TlsConfig.ClientKeyPath,
 		),
 	}
+	if gRPCServerConfig.TlsConfig.CACertPath != nil && *gRPCServerConfig.TlsConfig.CACertPath != "" {
+		opts = append(opts, kmipclient.WithRootCAFile(*gRPCServerConfig.TlsConfig.CACertPath))
+	}
 	if debug != nil && *debug {
 		opts = append(opts, kmipclient.WithMiddlewares(
 			kmipclient.DebugMiddleware(os.Stderr, ttlv.MarshalXML),
