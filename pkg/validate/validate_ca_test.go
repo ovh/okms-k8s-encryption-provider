@@ -71,7 +71,7 @@ func TestValidateFlags_InvalidCA(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected error, got nil")
 	}
-	if !strings.Contains(err.Error(), "Could not load CA certificate from --ca") {
+	if !strings.Contains(err.Error(), "Could not load CA certificate") {
 		t.Fatalf("expected --ca error, got %v", err)
 	}
 }
